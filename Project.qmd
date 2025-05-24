@@ -1,0 +1,211 @@
+---
+title: "Fertility rates in South America"
+format: html
+editor: visual
+---
+
+# Data
+
+```{r}
+latam_iso3 <- c("ARG", "BOL", "BRA", "CHL", "COL", "ECU", "PER", "PRY", "URY", "VEN")
+```
+
+```{r}
+library(readxl)
+
+temp <- read_excel("Data/WPP2024_FERT_F02_FERTILITY_RATES_BY_5-YEAR_AGE_GROUPS_OF_MOTHER.xlsx",
+                   skip = 16, 
+                   n_max = 1)
+total_cols <- ncol(temp)
+
+fertility_rates <- read_excel("Data/WPP2024_FERT_F02_FERTILITY_RATES_BY_5-YEAR_AGE_GROUPS_OF_MOTHER.xlsx",
+                              skip=16,
+                              col_types = c("numeric", "text", "text", "text",
+                                            "text",  # Location code
+                                            "text", "text",  # ISO3 and ISO2
+                                            "numeric", "text", "numeric",
+                                            "numeric",  # Year
+                                            rep("numeric", total_cols - 11)))
+```
+
+```{r}
+library(dplyr)
+
+fertility_rates <- fertility_rates %>% 
+  filter(`ISO3 Alpha-code` %in% latam_iso3)
+
+fertility_rates <- fertility_rates %>%
+  rename(Country = `Region, subregion, country or area *`)
+
+age_group_regex <- "^\\d+-\\d+$"
+
+fertility_rates <- fertility_rates %>%
+  select(
+    all_of(c("Country", "ISO3 Alpha-code", "Year")),
+    matches(age_group_regex)
+  )
+```
+
+```{r}
+start_year = 2010
+end_year = 2023
+
+fertility_rates <- fertility_rates %>%
+  filter(start_year <= Year & Year <= end_year)
+```
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(glue)
+
+graph_age_group <- function(age_group) {
+  ggplot(fertility_rates, aes(x = Year, y = .data[[age_group]], color = Country, group = Country)) +
+    geom_line(size = 0.8) +  # Adjust the line thickness
+    geom_point() + 
+    labs(
+      title = glue("Age-specific fertility rates by {age_group} age group"),
+      subtitle = "(births per 1,000 women)",
+      x = "Year", 
+      y = "Birth rates"
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "right",
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    )
+}
+
+graph_age_group("10-14")
+graph_age_group("15-19")
+graph_age_group("20-24")
+```
+
+```{r}
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(rnaturalearth)
+library(tidyr)
+
+south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
+
+draw_heat_map_year <- function(years, age_group) {
+  data <- fertility_rates %>%
+    select(Country, Year, `ISO3 Alpha-code`, .data[[age_group]]) %>%
+    filter(Year %in% years)
+  
+  map_data <- south_america %>%
+    left_join(data, by = c("iso_a3" = "ISO3 Alpha-code")) %>%
+    drop_na(Year)
+  
+  # Create the map visualization with four panels
+  ggplot(data = map_data) +
+    geom_sf(aes(fill = .data[[age_group]], geometry = geometry), color = "black") +
+    scale_fill_gradient(
+      low = "#FEE0D2",   # Lighter color
+      high = "#A50F15",   # Dark red for higher values
+      na.value = "gray90", # Gray for countries with no data
+      limits = c(0, 150),   # Value range
+      breaks = seq(0, 150, by = 10), # Scale in intervals of 5
+      name = "(births per 1,000 women)"
+    ) +
+    labs(
+      title = glue("Age-specific fertility rates by {age_group} age group"),
+      subtitle = "",
+    ) +
+    facet_wrap(~Year, ncol = length(years)) +  # Arrange panels in a single row
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      axis.text = element_text(size = 8),
+      strip.text = element_text(face = "bold", size = 10), # Facet titles
+      legend.position = "right",
+      panel.grid = element_blank() # Remove grid lines
+    )
+}
+
+draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "10-14")
+draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "15-19")
+draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "20-24")
+```
+
+```{r}
+library(readr)
+
+cima_learning <- read_csv("Data/cima_learning.csv")
+
+cima_learning <- cima_learning %>% 
+  filter(Country %in% latam_iso3, CIMA_Indicator == "Puntaje_Prom",
+         Class == "Total", Source == "PISA")
+```
+
+```{r}
+graph_score <- function(subject) {
+  cima_learning <- cima_learning %>%
+    filter(Subject == subject)
+  ggplot(cima_learning, aes(x = Year, y = Value, color = Country, group = Country)) +
+    geom_line(size = 0.8) +  # Adjust the line thickness
+    geom_point() + 
+    labs(
+      title = glue("PISA scores in subject {subject}"),
+      x = "Year", 
+      y = "Score"
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "right",
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    )
+}
+
+graph_score("Ciencias")
+graph_score("Matematicas")
+graph_score("Lectura")
+```
+
+
+```{r}
+south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
+
+draw_heat_map_subject <- function(subject) {
+  data <- cima_learning %>%
+    filter(Subject %in% subject)
+  
+  map_data <- south_america %>%
+    left_join(data, by = c("iso_a3" = "Country")) %>%
+    drop_na(Year)
+  
+  # Create the map visualization with four panels
+  ggplot(data = map_data) +
+    geom_sf(aes(fill = Value, geometry = geometry), color = "black") +
+    scale_fill_gradient(
+      low = "#FEE0D2",   # Lighter color
+      high = "#A50F15",   # Dark red for higher values
+      na.value = "gray90", # Gray for countries with no data
+      limits = c(300, 500),   # Value range
+      breaks = seq(300, 500, by = 20), # Scale in intervals of 5
+      name = "PISA total score"
+    ) +
+    labs(
+      title = glue("PISA scores in subject {subject}"),
+      subtitle = "",
+    ) +
+    facet_wrap(~Year, ncol = length(unique(map_data$Year))) +  # Arrange panels in a single row
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      axis.text = element_text(size = 8),
+      strip.text = element_text(face = "bold", size = 10), # Facet titles
+      legend.position = "right",
+      panel.grid = element_blank() # Remove grid lines
+    )
+}
+
+draw_heat_map_subject("Ciencias")
+draw_heat_map_subject("Matematicas")
+draw_heat_map_subject("Lectura")
+```
+
