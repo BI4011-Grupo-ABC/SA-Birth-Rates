@@ -13,12 +13,14 @@ latam_iso3 <- c("ARG", "BOL", "BRA", "CHL", "COL", "ECU", "PER", "PRY", "URY", "
 ```{r}
 library(readxl)
 
-temp <- read_excel("Data/WPP2024_FERT_F02_FERTILITY_RATES_BY_5-YEAR_AGE_GROUPS_OF_MOTHER.xlsx",
-                   skip = 16, 
+fertility_rates_file <- "Data/WPP2024_FERT_F01_FERTILITY_RATES_BY_SINGLE_AGE_OF_MOTHER.xlsx"
+
+temp <- read_excel(fertility_rates_file,
+                   skip = 16,
                    n_max = 1)
 total_cols <- ncol(temp)
 
-fertility_rates <- read_excel("Data/WPP2024_FERT_F02_FERTILITY_RATES_BY_5-YEAR_AGE_GROUPS_OF_MOTHER.xlsx",
+fertility_rates <- read_excel(fertility_rates_file,
                               skip=16,
                               col_types = c("numeric", "text", "text", "text",
                                             "text",  # Location code
@@ -28,30 +30,111 @@ fertility_rates <- read_excel("Data/WPP2024_FERT_F02_FERTILITY_RATES_BY_5-YEAR_A
                                             rep("numeric", total_cols - 11)))
 ```
 
+
 ```{r}
 library(dplyr)
 
-fertility_rates <- fertility_rates %>% 
-  filter(`ISO3 Alpha-code` %in% latam_iso3)
+process_bd <- function(bd, start_year, end_year) {
+  bd <- bd %>%
+    filter(`ISO3 Alpha-code` %in% latam_iso3) %>%
+    rename(Country = `Region, subregion, country or area *`)
 
-fertility_rates <- fertility_rates %>%
-  rename(Country = `Region, subregion, country or area *`)
+  age_group_regex <- "^\\d+$"
+  bd <- bd %>%
+    select(
+      all_of(c("Country", "ISO3 Alpha-code", "Year")),
+      matches(age_group_regex)
+    )
 
-age_group_regex <- "^\\d+-\\d+$"
+  start_year = 2010
+  end_year = 2023
 
-fertility_rates <- fertility_rates %>%
-  select(
-    all_of(c("Country", "ISO3 Alpha-code", "Year")),
-    matches(age_group_regex)
+  bd <- bd %>%
+    filter(start_year <= Year & Year <= end_year)
+}
+```
+
+```{r}
+fertility_rates <- process_bd(fertility_rates)
+```
+
+
+```{r}
+library(tidyverse)
+
+fertility_long <- fertility_rates %>%
+  pivot_longer(
+    cols = `15`:`49`,        # columns to pivot (note the backticks since they're numeric colnames)
+    names_to = "MothersAge",        # new column for age
+    values_to = "FertilityRate"  # new column for fertility rate values
+  )
+```
+
+
+```{r}
+library(readxl)
+
+total_births_file <- "Data/WPP2024_FERT_F03_BIRTHS_BY_SINGLE_AGE_OF_MOTHER.xlsx"
+
+temp <- read_excel(total_births_file,
+                   skip = 16,
+                   n_max = 1)
+total_cols <- ncol(temp)
+
+total_births <- read_excel(total_births_file,
+                          skip=16,
+                          col_types = c("numeric", "text", "text", "text",
+                                        "text",  # Location code
+                                        "text", "text",  # ISO3 and ISO2
+                                        "numeric", "text", "numeric",
+                                        "numeric",  # Year
+                                        rep("numeric", total_cols - 11)))
+```
+
+```{r}
+total_births <- process_bd(total_births)
+
+births_long <- total_births %>%
+  pivot_longer(
+    cols = `15`:`49`,
+    names_to = "MothersAge",
+    values_to = "Births"
   )
 ```
 
 ```{r}
-start_year = 2010
-end_year = 2023
+births_data <- inner_join(
+  births_long,
+  fertility_long,
+  by = c("Country", "ISO3 Alpha-code", "Year", "MothersAge")
+)
 
-fertility_rates <- fertility_rates %>%
-  filter(start_year <= Year & Year <= end_year)
+births_data <- births_data %>%
+  mutate(TotalWomen = (Births * 1000 * 1000) / FertilityRate)
+```
+
+
+```{r}
+library(tidyverse)
+
+births_data_grouped <- births_data %>%
+  mutate(AgeGroup = if_else(as.numeric(MothersAge) <= 18, "≤18", ">18")) %>%
+  group_by(Country, `ISO3 Alpha-code`, Year, AgeGroup) %>%
+  summarise(
+    Births = sum(Births, na.rm = TRUE),
+    TotalWomen  = sum(TotalWomen, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  pivot_wider(
+    names_from = AgeGroup,
+    values_from = c(Births, TotalWomen)
+  )
+
+births_data_grouped <- births_data_grouped %>%
+  mutate(
+    `BirthRate_≤18`  = (`Births_≤18` / `TotalWomen_≤18`) * 1000 * 1000,
+    `BirthRate_>18`  = (`Births_>18` / `TotalWomen_>18`) * 1000 * 1000
+  )
 ```
 
 ```{r}
@@ -59,14 +142,14 @@ library(ggplot2)
 library(tidyverse)
 library(glue)
 
-graph_age_group <- function(age_group) {
-  ggplot(fertility_rates, aes(x = Year, y = .data[[age_group]], color = Country, group = Country)) +
+graph_age <- function(age) {
+  ggplot(births_data_grouped, aes(x = Year, y = .data[[age]], color = Country, group = Country)) +
     geom_line(size = 0.8) +  # Adjust the line thickness
-    geom_point() + 
+    geom_point() +
     labs(
-      title = glue("Age-specific fertility rates by {age_group} age group"),
+      title = glue("Fertility rates in {age}"),
       subtitle = "(births per 1,000 women)",
-      x = "Year", 
+      x = "Year",
       y = "Birth rates"
     ) +
     theme_minimal() +
@@ -76,9 +159,8 @@ graph_age_group <- function(age_group) {
     )
 }
 
-graph_age_group("10-14")
-graph_age_group("15-19")
-graph_age_group("20-24")
+graph_age("BirthRate_≤18")
+graph_age("BirthRate_>18")
 ```
 
 ```{r}
@@ -90,18 +172,18 @@ library(tidyr)
 
 south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
 
-draw_heat_map_year <- function(years, age_group) {
+draw_heat_map_year <- function(years, age) {
   data <- fertility_rates %>%
-    select(Country, Year, `ISO3 Alpha-code`, .data[[age_group]]) %>%
+    select(Country, Year, `ISO3 Alpha-code`, .data[[age]]) %>%
     filter(Year %in% years)
-  
+
   map_data <- south_america %>%
     left_join(data, by = c("iso_a3" = "ISO3 Alpha-code")) %>%
     drop_na(Year)
-  
+
   # Create the map visualization with four panels
   ggplot(data = map_data) +
-    geom_sf(aes(fill = .data[[age_group]], geometry = geometry), color = "black") +
+    geom_sf(aes(fill = .data[[age]], geometry = geometry), color = "black") +
     scale_fill_gradient(
       low = "#FEE0D2",   # Lighter color
       high = "#A50F15",   # Dark red for higher values
@@ -111,7 +193,7 @@ draw_heat_map_year <- function(years, age_group) {
       name = "(births per 1,000 women)"
     ) +
     labs(
-      title = glue("Age-specific fertility rates by {age_group} age group"),
+      title = glue("Age-specific fertility rates by {age} age"),
       subtitle = "",
     ) +
     facet_wrap(~Year, ncol = length(years)) +  # Arrange panels in a single row
@@ -126,9 +208,9 @@ draw_heat_map_year <- function(years, age_group) {
     )
 }
 
-draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "10-14")
-draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "15-19")
-draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "20-24")
+draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "15")
+draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "17")
+draw_heat_map_year(c(2010, 2015, 2020, 2021, 2022, 2023), "20")
 ```
 
 ```{r}
@@ -136,7 +218,7 @@ library(readr)
 
 cima_learning <- read_csv("Data/cima_learning.csv")
 
-cima_learning <- cima_learning %>% 
+cima_learning <- cima_learning %>%
   filter(Country %in% latam_iso3, CIMA_Indicator == "Puntaje_Prom",
          Class == "Total", Source == "PISA")
 ```
@@ -147,10 +229,10 @@ graph_score <- function(subject) {
     filter(Subject == subject)
   ggplot(cima_learning, aes(x = Year, y = Value, color = Country, group = Country)) +
     geom_line(size = 0.8) +  # Adjust the line thickness
-    geom_point() + 
+    geom_point() +
     labs(
       title = glue("PISA scores in subject {subject}"),
-      x = "Year", 
+      x = "Year",
       y = "Score"
     ) +
     theme_minimal() +
@@ -172,11 +254,11 @@ south_america <- ne_countries(scale = "medium", continent = "South America", ret
 draw_heat_map_subject <- function(subject) {
   data <- cima_learning %>%
     filter(Subject %in% subject)
-  
+
   map_data <- south_america %>%
     left_join(data, by = c("iso_a3" = "Country")) %>%
     drop_na(Year)
-  
+
   # Create the map visualization with four panels
   ggplot(data = map_data) +
     geom_sf(aes(fill = Value, geometry = geometry), color = "black") +
