@@ -326,63 +326,72 @@ ggplot(fertilidad_total, aes(x = Year, y = TotalFertility, color = Country)) +
 ```
 
 ```{r}
+elbow = function(data) {
+  library(factoextra)
+  # determine the maximum number of clusters
+  n_obs <- nrow(data)  # number of rows in the scaled data
+  
+  # plot the elbow method with a limit on the number of clusters
+  fviz_nbclust(data, kmeans, method = "wss", k.max = min(10, n_obs - 1)) +
+    labs(title = "elbow method to determine the optimal number of clusters for ...")
+}
+```
+
+```{r}
+clusterize <- function(data, k) {
+  library(factoextra)
+  library(dendextend)
+
+  # Calculate the distance matrix (using Euclidean distance)
+  distance_matrix <- dist(data, method = "euclidean")
+
+  # Perform hierarchical clustering (using complete linkage method)
+  hclust_result <- hclust(distance_matrix, method = "complete")
+
+  # Plot the dendrogram
+  dend <- fviz_dend(hclust_result, k = k,  # Number of desired clusters
+            cex = 0.5,             # Text size
+            k_colors = c("red", "blue", "green"),  # Cluster colors
+            rect = TRUE,           # Draw rectangles around clusters
+            rect_border = "gray",
+            rect_fill = TRUE,
+            main = "Dendrogram of Hierarchical Clustering ...")
+
+  # Assign observations to clusters (k = desired number of clusters)
+  cluster_assignments <- cutree(hclust_result, k = k)  # Adjust "k" for the desired number of clusters
+
+  # Visualize clusters in PCA space
+  clusters <- fviz_cluster(
+    list(data = data, cluster = cluster_assignments),
+    geom = "point",
+    ellipse.type = "convex",  # Draw convex hulls around clusters
+    ggtheme = theme_minimal(),
+    main = "Hierarchical Clustering Visualization with PCA"
+  )
+
+  return(list(
+    dendrogram = dend,
+    cluster_plot = clusters,
+    assignments = cluster_assignments
+  ))
+}
+```
+
+```{r}
 start_year <- 2010
 end_year <- 2014
 
 year_cols <- as.character(start_year:end_year)
 data_range_1 <- tabla_resumen[, year_cols]
-```
-
-```{r}
 data_scaled_1 <- scale(data_range_1)
 ```
 
 ```{r}
-library(factoextra)
-# Determine the maximum number of clusters
-n_obs <- nrow(data_scaled_1)  # Number of rows in the scaled data
-
-# Plot the elbow method with a limit on the number of clusters
-fviz_nbclust(data_scaled_1, kmeans, method = "wss", k.max = min(10, n_obs - 1)) +
-  labs(title = "Elbow Method to Determine the Optimal Number of Clusters (2011 - 2021)")
+elbow(data_scaled_1)
 ```
 
 ```{r}
-# Load necessary libraries
-if (!requireNamespace("factoextra", quietly = TRUE)) install.packages("factoextra")
-if (!requireNamespace("dendextend", quietly = TRUE)) install.packages("dendextend")
-
-library(factoextra)
-library(dendextend)
-
-# Calculate the distance matrix (using Euclidean distance)
-distance_matrix_1 <- dist(data_scaled_1, method = "euclidean")
-
-# Perform hierarchical clustering (using complete linkage method)
-hclust_result_1 <- hclust(distance_matrix_1, method = "complete")
-
-# Plot the dendrogram
-fviz_dend(hclust_result, k = 3,  # Number of desired clusters
-          cex = 0.5,             # Text size
-          k_colors = c("red", "blue", "green"),  # Cluster colors
-          rect = TRUE,           # Draw rectangles around clusters
-          rect_border = "gray",
-          rect_fill = TRUE,
-          main = "Dendrogram of Hierarchical Clustering (2010 - 2014)")
-```
-
-```{r}
-# Assign observations to clusters (k = desired number of clusters)
-cluster_assignments_1 <- cutree(hclust_result_1, k = 3)  # Adjust "k" for the desired number of clusters
-
-# Visualize clusters in PCA space
-fviz_cluster(
-  list(data = data_scaled_1, cluster = cluster_assignments_1),
-  geom = "point",
-  ellipse.type = "convex",  # Draw convex hulls around clusters
-  ggtheme = theme_minimal(),
-  main = "Hierarchical Clustering Visualization with PCA"
-)
+clusterize(data_scaled_1, 3)
 ```
 
 ```{r}
@@ -391,62 +400,12 @@ end_year <- 2019
 
 year_cols <- as.character(start_year:end_year)
 data_range_2 <- tabla_resumen[, year_cols]
-```
-
-```{r}
 data_scaled_2 <- scale(data_range_2)
 ```
 
 ```{r}
-n_obs_2 <- nrow(data_scaled_2)  # Number of rows in the scaled data
-
-# Plot the elbow method with a limit on the number of clusters
-fviz_nbclust(data_scaled_2, kmeans, method = "wss", k.max = min(10, n_obs - 1)) +
-  labs(title = "Elbow Method to Determine the Number of Clusters (2010 - 2014)")
-```
-
-```{r}
-# Load necessary libraries
-if (!requireNamespace("factoextra", quietly = TRUE)) install.packages("factoextra")
-if (!requireNamespace("dendextend", quietly = TRUE)) install.packages("dendextend")
-
-library(factoextra)
-library(dendextend)
-
-# Calculate the distance matrix (using Euclidean distance)
-distance_matrix_2 <- dist(data_scaled_2, method = "euclidean")
-
-# Perform hierarchical clustering (using complete linkage method)
-hclust_result_2 <- hclust(distance_matrix_2, method = "complete")
-
-# Plot the dendrogram
-fviz_dend(hclust_result, k = 3,  # Number of desired clusters
-          cex = 0.5,             # Text size
-          k_colors = c("red", "blue", "green"),  # Cluster colors
-          rect = TRUE,           # Draw rectangles around clusters
-          rect_border = "gray",
-          rect_fill = TRUE,
-          main = "Dendrogram of Hierarchical Clustering (2010 - 2014)")
-```
-
-```{r}
-# Assign observations to clusters (k = desired number of clusters)
-cluster_assignments_2 <- cutree(hclust_result_2, k = 3)  # Adjust "k" for the desired number of clusters
-
-# Visualize clusters in PCA space
-fviz_cluster(
-  list(data = data_scaled_2, cluster = cluster_assignments_2),
-  geom = "point",
-  ellipse.type = "convex",  # Draw convex hulls around clusters
-  ggtheme = theme_minimal(),
-```
-
-```{r}
-
-```
-
-```{main = "Hierarchical Clustering Visualization with PCA"}
-)
+elbow(data_scaled_2)
+clusterize(data_scaled_2, 3)
 ```
 
 ```{r}
@@ -455,54 +414,10 @@ end_year <- 2023
 
 year_cols <- as.character(start_year:end_year)
 data_range_3 <- tabla_resumen[, year_cols]
-```
-
-```{r}
 data_scaled_3 <- scale(data_range_3)
 ```
 
 ```{r}
-n_obs_3 <- nrow(data_scaled_3)  # Number of rows in the scaled data
-
-# Plot the elbow method with a limit on the number of clusters
-fviz_nbclust(data_scaled_3, kmeans, method = "wss", k.max = min(10, n_obs - 1)) +
-  labs(title = "Elbow Method to Determine the Number of Clusters (2010 - 2014)")
-```
-
-```{r}
-# Load necessary libraries
-if (!requireNamespace("factoextra", quietly = TRUE)) install.packages("factoextra")
-if (!requireNamespace("dendextend", quietly = TRUE)) install.packages("dendextend")
-
-library(factoextra)
-library(dendextend)
-
-# Calculate the distance matrix (using Euclidean distance)
-distance_matrix_3 <- dist(data_scaled_3, method = "euclidean")
-
-# Perform hierarchical clustering (using complete linkage method)
-hclust_result_3 <- hclust(distance_matrix_3, method = "complete")
-
-# Plot the dendrogram
-fviz_dend(hclust_result, k = 3,  # Number of desired clusters
-          cex = 0.5,             # Text size
-          k_colors = c("red", "blue", "green"),  # Cluster colors
-          rect = TRUE,           # Draw rectangles around clusters
-          rect_border = "gray",
-          rect_fill = TRUE,
-          main = "Dendrogram of Hierarchical Clustering (2010 - 2014)")
-```
-
-```{r}
-# Assign observations to clusters (k = desired number of clusters)
-cluster_assignments_3 <- cutree(hclust_result_2, k = 3)  # Adjust "k" for the desired number of clusters
-
-# Visualize clusters in PCA space
-fviz_cluster(
-  list(data = data_scaled_3, cluster = cluster_assignments_3),
-  geom = "point",
-  ellipse.type = "convex",  # Draw convex hulls around clusters
-  ggtheme = theme_minimal(),
-  main = "Hierarchical Clustering Visualization with PCA"
-)
+elbow(data_scaled_3)
+clusterize(data_scaled_3, 3)
 ```
