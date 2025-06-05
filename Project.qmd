@@ -506,3 +506,86 @@ fviz_cluster(
   main = "Hierarchical Clustering Visualization with PCA"
 )
 ```
+
+```{r}
+# Cargar librerías necesarias
+library(dplyr)
+
+# Leer el archivo original (asegúrate de tener el archivo en el directorio de trabajo)
+data_original <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
+
+# Renombrar la primera columna como "Country"
+colnames(data_original)[1] <- "Country"
+
+# Seleccionar columnas de 2010 a 2014
+data_years <- data_original[, c("Country", "2010", "2011", "2012", "2013", "2014")]
+
+# Escalar solo las columnas numéricas (excluyendo "Country")
+data_scaled_1 <- scale(data_years[, -1])  # Excluye la columna "Country"
+
+# Clustering jerárquico
+hclust_result <- hclust(dist(data_scaled_1))
+clusters_hierarchical <- cutree(hclust_result, k = 3)
+
+# Combinar Country, datos originales y clusters
+data_combined_2010_2014 <- data_years %>%
+  mutate(Cluster = as.factor(clusters_hierarchical))
+
+# Intercambiar etiquetas de cluster 1 y 2
+data_combined_2010_2014 <- data_combined_2010_2014 %>%
+  mutate(
+    Cluster = case_when(
+      Cluster == "1" ~ "2",
+      Cluster == "2" ~ "1",
+      TRUE ~ as.character(Cluster)
+    ),
+    Cluster = as.factor(Cluster)
+  )
+
+# Mostrar los primeros resultados
+head(data_combined_2010_2014)
+
+```
+
+```{r}
+# Cargar librerías necesarias
+if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
+if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
+if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Convertir los datos a formato largo
+data_long <- data_combined_2010_2014 %>%
+  pivot_longer(
+    cols = starts_with("20"),    # columnas de años
+    names_to = "Year",           # nueva columna con el año
+    values_to = "Emissions"      # nueva columna con el valor
+  ) %>%
+  mutate(Year = as.numeric(Year))  # convertir "2010", "2011", ... a número
+
+# Crear el gráfico con facetas por Cluster
+ggplot(data_long, aes(x = Year, y = Emissions, color = Country, group = Country)) +
+  geom_line(size = 0.8) +
+  geom_point(size = 2) +
+  facet_wrap(~Cluster, nrow = 1) +
+  scale_x_continuous(
+    breaks = 2010:2014
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Tasa de Fertilidad por País y Cluster (2010–2014)",
+    subtitle = "Agrupado según clustering jerárquico",
+    x = "Año",
+    y = "Tasa estandarizada",
+    color = "País"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    legend.position = "right"
+  )
+
+```
