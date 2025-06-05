@@ -338,7 +338,13 @@ data_scaled_1 <- scale(data_range_1)
 ```
 
 ```{r}
+library(factoextra)
+# Determine the maximum number of clusters
+n_obs <- nrow(data_scaled_1)  # Number of rows in the scaled data
 
+# Plot the elbow method with a limit on the number of clusters
+fviz_nbclust(data_scaled_1, kmeans, method = "wss", k.max = min(10, n_obs - 1)) +
+  labs(title = "Elbow Method to Determine the Optimal Number of Clusters (2011 - 2021)")
 ```
 
 ```{r}
