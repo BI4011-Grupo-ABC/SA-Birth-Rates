@@ -30,7 +30,6 @@ fertility_rates <- read_excel(fertility_rates_file,
                                             rep("numeric", total_cols - 11)))
 ```
 
-
 ```{r}
 library(dplyr)
 
@@ -58,7 +57,6 @@ process_bd <- function(bd, start_year, end_year) {
 fertility_rates <- process_bd(fertility_rates)
 ```
 
-
 ```{r}
 library(tidyverse)
 
@@ -69,7 +67,6 @@ fertility_long <- fertility_rates %>%
     values_to = "FertilityRate"  # new column for fertility rate values
   )
 ```
-
 
 ```{r}
 library(readxl)
@@ -112,7 +109,6 @@ births_data <- inner_join(
 births_data <- births_data %>%
   mutate(TotalWomen = (Births * 1000 * 1000) / FertilityRate)
 ```
-
 
 ```{r}
 library(tidyverse)
@@ -247,7 +243,6 @@ graph_score("Matematicas")
 graph_score("Lectura")
 ```
 
-
 ```{r}
 south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
 
@@ -291,3 +286,41 @@ draw_heat_map_subject("Matematicas")
 draw_heat_map_subject("Lectura")
 ```
 
+```{r}
+view(fertility_rates)
+view(fertility_long)
+
+# Paso 1: Sumar la tasa de fertilidad total por país y año
+fertilidad_total <- fertility_long %>%
+  group_by(Country, Year) %>%
+  summarise(TotalFertility = sum(FertilityRate), .groups = "drop")
+
+# Paso 2: Pivotear — ahora los años serán columnas
+tabla_resumen <- fertilidad_total %>%
+  pivot_wider(names_from = Year, values_from = TotalFertility)
+
+# Paso 3: Ver tabla
+View(tabla_resumen)
+
+# (Opcional) Guardar como CSV
+write.csv(tabla_resumen, "tabla_resumen_fertilidad_transpuesta.csv", row.names = FALSE)
+
+```
+
+```{r}
+# Graficar
+ggplot(fertilidad_total, aes(x = Year, y = TotalFertility, color = Country)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(
+    title = "Tasa Total de Fertilidad por País (2010–2023)",
+    x = "Año",
+    y = "Tasa Total de Fertilidad",
+    color = "País"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
