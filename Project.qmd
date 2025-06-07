@@ -7,7 +7,7 @@ editor: visual
 # Data
 
 ```{r}
-latam_iso3 <- c("ARG", "BOL", "BRA", "CHL", "COL", "ECU", "PER", "PRY", "URY", "VEN")
+latam_iso3 <- c("ARG", "BOL", "BRA", "CHL", "COL", "ECU", "PER", "URY", "VEN")
 ```
 
 ```{r}
