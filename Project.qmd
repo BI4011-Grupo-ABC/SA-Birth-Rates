@@ -7,7 +7,7 @@ editor: visual
 # Data
 
 ```{r}
-latam_iso3 <- c("ARG", "BOL", "BRA", "CHL", "COL", "ECU", "PER", "PRY", "URY", "VEN")
+latam_iso3 <- c("ARG", "BOL", "BRA", "CHL", "COL", "ECU", "PER", "URY", "VEN")
 ```
 
 ```{r}
@@ -221,16 +221,16 @@ library(readr)
 
 cima_learning <- read_csv("Data/cima_learning.csv")
 
-cima_learning <- cima_learning %>%
+pisa_scores <- cima_learning %>%
   filter(Country %in% latam_iso3, CIMA_Indicator == "Puntaje_Prom",
          Class == "Total", Source == "PISA")
 ```
 
 ```{r}
 graph_score <- function(subject) {
-  cima_learning <- cima_learning %>%
+  pisa_subject_scores <- pisa_scores %>%
     filter(Subject == subject)
-  ggplot(cima_learning, aes(x = Year, y = Value, color = Country, group = Country)) +
+  ggplot(pisa_subject_scores, aes(x = Year, y = Value, color = Country, group = Country)) +
     geom_line(size = 0.8) +  # Adjust the line thickness
     geom_point() +
     labs(
@@ -258,7 +258,7 @@ south_america <- ne_countries(scale = "medium", continent = "South America", ret
 draw_heat_map_subject <- function(subject) {
   message(glue("Usando subject: {subject}"))  # Verifica qué subject se está usando
 
-  data <- cima_learning %>%
+  data <- pisa_scores %>%
     filter(tolower(Subject) == tolower(subject))  # Comparación segura
 
   map_data <- south_america %>%
@@ -720,4 +720,41 @@ ggplot(data_long_3, aes(x = Year, y = `Tasa de fertilidad`, color = Country, gro
     legend.position = "right",
     panel.spacing = unit(1.5, "lines")                 # Aumentar espacio entre clusters
   )
+```
+
+# Education clustering
+
+```{r}
+library(tidyr)
+library(dplyr)
+
+pisa_scores_interpolated <- pisa_scores %>%
+  group_by(CIMA_Indicator, Country, Source, Subject, Grade, Class) %>%
+  complete(Year = full_seq(Year, 1)) %>%
+  arrange(Year) %>%
+  mutate(Value = approx(Year, Value, Year, rule=2)$y) %>%
+  ungroup()
+
+pisa_scores_interpolated_wide <- pisa_scores_interpolated %>%
+  pivot_wider(names_from = Year, values_from = Value)
+
+pisa_2010_2022 <- pisa_scores_interpolated_wide %>%
+  select(CIMA_Indicator, Country, Source, Subject, Grade, Class, `2010`:`2022`)
+
+pisa_2010_2022_science <- pisa_2010_2022 %>% 
+  filter(Subject == "Ciencias")
+```
+
+```{r}
+start_year <- 2010
+end_year <- 2014
+
+year_cols <- as.character(start_year:end_year)
+pisa_2010_2014 <- pisa_2010_2022_science[, year_cols]
+pisa_2010_2014_scaled <- scale(pisa_2010_2014)
+```
+
+```{r}
+elbow(pisa_2010_2014_scaled)
+clusterize(pisa_2010_2014_scaled, k=3)
 ```
