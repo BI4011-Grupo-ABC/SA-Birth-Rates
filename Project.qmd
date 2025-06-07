@@ -214,16 +214,16 @@ library(readr)
 
 cima_learning <- read_csv("Data/cima_learning.csv")
 
-cima_learning <- cima_learning %>%
+pisa_scores <- cima_learning %>%
   filter(Country %in% latam_iso3, CIMA_Indicator == "Puntaje_Prom",
          Class == "Total", Source == "PISA")
 ```
 
 ```{r}
 graph_score <- function(subject) {
-  cima_learning <- cima_learning %>%
+  pisa_subject_scores <- pisa_scores %>%
     filter(Subject == subject)
-  ggplot(cima_learning, aes(x = Year, y = Value, color = Country, group = Country)) +
+  ggplot(pisa_subject_scores, aes(x = Year, y = Value, color = Country, group = Country)) +
     geom_line(size = 0.8) +  # Adjust the line thickness
     geom_point() +
     labs(
@@ -247,7 +247,7 @@ graph_score("Lectura")
 south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
 
 draw_heat_map_subject <- function(subject) {
-  data <- cima_learning %>%
+  data <- pisa_scores %>%
     filter(Subject %in% subject)
 
   map_data <- south_america %>%
