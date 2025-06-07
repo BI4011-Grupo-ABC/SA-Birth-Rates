@@ -504,3 +504,40 @@ ggplot(data_long, aes(x = Year, y = Emissions, color = Country, group = Country)
   )
 
 ```
+
+# Education clustering
+
+```{r}
+library(tidyr)
+library(dplyr)
+
+pisa_scores_interpolated <- pisa_scores %>%
+  group_by(CIMA_Indicator, Country, Source, Subject, Grade, Class) %>%
+  complete(Year = full_seq(Year, 1)) %>%
+  arrange(Year) %>%
+  mutate(Value = approx(Year, Value, Year, rule=2)$y) %>%
+  ungroup()
+
+pisa_scores_interpolated_wide <- pisa_scores_interpolated %>%
+  pivot_wider(names_from = Year, values_from = Value)
+
+pisa_2010_2022 <- pisa_scores_interpolated_wide %>%
+  select(CIMA_Indicator, Country, Source, Subject, Grade, Class, `2010`:`2022`)
+
+pisa_2010_2022_science <- pisa_2010_2022 %>% 
+  filter(Subject == "Ciencias")
+```
+
+```{r}
+start_year <- 2010
+end_year <- 2014
+
+year_cols <- as.character(start_year:end_year)
+pisa_2010_2014 <- pisa_2010_2022_science[, year_cols]
+pisa_2010_2014_scaled <- scale(pisa_2010_2014)
+```
+
+```{r}
+elbow(pisa_2010_2014_scaled)
+clusterize(pisa_2010_2014_scaled, k=3)
+```
