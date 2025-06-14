@@ -345,7 +345,11 @@ write.csv(tabla_resumen, "tabla_resumen_fertilidad_transpuesta.csv", row.names =
 
 ```{r}
 # Graficar
-ggplot(fertilidad_total, aes(x = Year, y = TotalFertility, color = Country)) +
+fertilidad_total_mod <- fertilidad_total %>%
+  mutate(Pais_Abrev = substr(Country, 1, 3))
+
+# Usar la abreviatura en el mapeo de color
+ggplot(fertilidad_total_mod, aes(x = Year, y = TotalFertility, color = Pais_Abrev)) +
   geom_line(size = 1) +
   geom_point(size = 1.5) +
   labs(
@@ -456,7 +460,7 @@ end_year <- 2023
 year_cols <- as.character(start_year:end_year)
 data_range_3 <- tabla_resumen[, year_cols]
 
-rownames(data_range_) <- substr(tabla_resumen$Country, 1, 3)
+rownames(data_range_3) <- substr(tabla_resumen$Country, 1, 3)
 
 data_scaled_3 <- scale(data_range_3)
 ```
@@ -539,7 +543,7 @@ ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Cou
     subtitle = "Agrupado según clustering jerárquico",
     x = "Año",
     y = "Tasa estandarizada",
-    color = "País (abreviado)"
+    color = "País"
   ) +
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
@@ -631,7 +635,7 @@ ggplot(data_long_2, aes(x = Year, y = `Tasa de fertilidad`, color = Country, gro
     legend.text = element_text(size = 8),              # Tamaño de leyenda
     legend.title = element_text(face = "bold", size = 9),
     legend.position = "right",
-    panel.spacing = unit(1.5, "lines")                 # Aumentar espacio entre clusters
+    panel.spacing = unit(1, "lines")                 # Aumentar espacio entre clusters
   )
 
 ```
@@ -718,7 +722,7 @@ ggplot(data_long_3, aes(x = Year, y = `Tasa de fertilidad`, color = Country, gro
     legend.text = element_text(size = 8),
     legend.title = element_text(face = "bold", size = 9),
     legend.position = "right",
-    panel.spacing = unit(1.5, "lines")                 # Aumentar espacio entre clusters
+    panel.spacing = unit(1, "lines")                 # Aumentar espacio entre clusters
   )
 ```
 
