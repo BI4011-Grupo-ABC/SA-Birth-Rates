@@ -165,6 +165,7 @@ library(ggplot2)
 library(dplyr)
 library(rnaturalearth)
 library(tidyr)
+library(RColorBrewer)
 
 south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
 
@@ -177,30 +178,36 @@ draw_heat_map_year <- function(years, age) {
     left_join(data, by = c("iso_a3" = "ISO3 Alpha-code")) %>%
     drop_na(Year)
 
-  # Create the map visualization with four panels
   ggplot(data = map_data) +
-    geom_sf(aes(fill = .data[[age]], geometry = geometry), color = "black") +
-    scale_fill_gradient(
-      low = "#FEE0D2",   # Lighter color
-      high = "#A50F15",   # Dark red for higher values
-      na.value = "gray90", # Gray for countries with no data
-      limits = c(0, 150),   # Value range
-      breaks = seq(0, 150, by = 10), # Scale in intervals of 5
-      name = "(births per 1,000 women)"
+    geom_sf(aes(fill = .data[[age]]), color = "black") +
+    
+    # Usar paleta "Blues" con 7 tonos
+    scale_fill_stepsn(
+      colours = brewer.pal(7, "Blues"),
+      breaks = c(0, 25, 50, 75, 100, 125, 150),
+      limits = c(0, 150),
+      name = "(births per 1,000 women)",
+      na.value = "gray90"
     ) +
+    
     labs(
       title = glue("Age-specific fertility rates by {age} age"),
-      subtitle = "",
+      subtitle = ""
     ) +
-    facet_wrap(~Year, ncol = length(years)) +  # Arrange panels in a single row
+    
+    facet_wrap(~Year, ncol = 3) +
     theme_minimal() +
     theme(
       plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
       plot.subtitle = element_text(hjust = 0.5, size = 12),
-      axis.text = element_text(size = 8),
-      strip.text = element_text(face = "bold", size = 10), # Facet titles
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title = element_blank(),
+      strip.text = element_text(face = "bold", size = 10),
       legend.position = "right",
-      panel.grid = element_blank() # Remove grid lines
+      legend.text = element_text(size = 8),
+      panel.grid = element_blank(),
+      panel.spacing = unit(0.5, "lines")
     )
 }
 
@@ -244,40 +251,69 @@ graph_score("Lectura")
 ```
 
 ```{r}
+# Obtener el mapa de Sudamérica
 south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
 
+# Función para graficar mapas por subject
 draw_heat_map_subject <- function(subject) {
+  message(glue("Usando subject: {subject}"))  # Verifica qué subject se está usando
+
   data <- pisa_scores %>%
-    filter(Subject %in% subject)
+    filter(tolower(Subject) == tolower(subject))  # Comparación segura
 
   map_data <- south_america %>%
     left_join(data, by = c("iso_a3" = "Country")) %>%
     drop_na(Year)
 
-  # Create the map visualization with four panels
+  # Normalizar subject a minúsculas
+  subject_lower <- tolower(subject)
+
+  # Establecer rango de colores y paleta según el subject
+  if (subject_lower == "ciencias") {
+    color_limits <- c(350, 470)
+    palette_name <- "Blues"
+  } else if (subject_lower == "matemáticas") {
+    color_limits <- c(320, 480)
+    palette_name <- "Reds"
+  } else if (subject_lower == "lectura") {
+    color_limits <- c(340, 510)
+    palette_name <- "Greens"
+  } else {
+    color_limits <- c(300, 500)
+    palette_name <- "Greys"
+  }
+
+  # Crear gráfico
   ggplot(data = map_data) +
-    geom_sf(aes(fill = Value, geometry = geometry), color = "black") +
-    scale_fill_gradient(
-      low = "#FEE0D2",   # Lighter color
-      high = "#A50F15",   # Dark red for higher values
-      na.value = "gray90", # Gray for countries with no data
-      limits = c(300, 500),   # Value range
-      breaks = seq(300, 500, by = 20), # Scale in intervals of 5
-      name = "PISA total score"
+    geom_sf(aes(fill = Value), color = "black") +
+    scale_fill_stepsn(
+      colours = brewer.pal(7, palette_name),
+      breaks = seq(color_limits[1], color_limits[2], length.out = 7),
+      labels = function(x) round(x),
+      limits = color_limits,
+      na.value = "gray90",
+      name = "PISA\ntotal score"
     ) +
     labs(
       title = glue("PISA scores in subject {subject}"),
-      subtitle = "",
+      subtitle = ""
     ) +
-    facet_wrap(~Year, ncol = length(unique(map_data$Year))) +  # Arrange panels in a single row
+    facet_wrap(~Year, ncol = 3) +  # 3 columnas → 2 filas si hay 6 años
     theme_minimal() +
     theme(
       plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
       plot.subtitle = element_text(hjust = 0.5, size = 12),
-      axis.text = element_text(size = 8),
-      strip.text = element_text(face = "bold", size = 10), # Facet titles
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title = element_blank(),
+      strip.text = element_text(face = "bold", size = 10),
       legend.position = "right",
-      panel.grid = element_blank() # Remove grid lines
+      legend.direction = "vertical",
+      legend.text = element_text(size = 8),
+      legend.title = element_text(face = "bold", size = 9),
+      legend.key.height = unit(0.5, "cm"),
+      panel.grid = element_blank(),
+      panel.spacing = unit(0.5, "lines")
     )
 }
 
@@ -391,6 +427,8 @@ elbow(data_scaled_1)
 ```
 
 ```{r}
+rownames(data_range_1) <- substr(tabla_resumen$Country, 1, 3)
+data_scaled_1 <- scale(data_range_1)
 clusterize(data_scaled_1, 3)
 ```
 
@@ -400,6 +438,9 @@ end_year <- 2019
 
 year_cols <- as.character(start_year:end_year)
 data_range_2 <- tabla_resumen[, year_cols]
+
+rownames(data_range_2) <- substr(tabla_resumen$Country, 1, 3)
+
 data_scaled_2 <- scale(data_range_2)
 ```
 
@@ -414,6 +455,9 @@ end_year <- 2023
 
 year_cols <- as.character(start_year:end_year)
 data_range_3 <- tabla_resumen[, year_cols]
+
+rownames(data_range_) <- substr(tabla_resumen$Country, 1, 3)
+
 data_scaled_3 <- scale(data_range_3)
 ```
 
@@ -472,26 +516,109 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
-# Convertir los datos a formato largo
 data_long <- data_combined_2010_2014 %>%
   pivot_longer(
     cols = starts_with("20"),    # columnas de años
     names_to = "Year",           # nueva columna con el año
     values_to = "Emissions"      # nueva columna con el valor
   ) %>%
-  mutate(Year = as.numeric(Year))  # convertir "2010", "2011", ... a número
+  mutate(
+    Year = as.numeric(Year),                # convertir "2010", "2011", ... a número
+    Country_abbr = substr(Country, 1, 3)    # abreviar país a 3 letras
+  )
 
 # Crear el gráfico con facetas por Cluster
-ggplot(data_long, aes(x = Year, y = Emissions, color = Country, group = Country)) +
+ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
   facet_wrap(~Cluster, nrow = 1) +
-  scale_x_continuous(
-    breaks = 2010:2014
-  ) +
+  scale_x_continuous(breaks = 2010:2014) +
   theme_minimal() +
   labs(
     title = "Tasa de Fertilidad por País y Cluster (2010–2014)",
+    subtitle = "Agrupado según clustering jerárquico",
+    x = "Año",
+    y = "Tasa estandarizada",
+    color = "País (abreviado)"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    axis.text.x = element_text(size = 8),               # Tamaño reducido en eje X
+    legend.position = "right",
+    panel.spacing = unit(1, "lines")                    # Espaciado entre paneles
+  )
+```
+
+```{r}
+# Cargar librerías necesarias
+library(dplyr)
+
+# Leer el archivo original (asegúrate de tener el archivo en el directorio de trabajo)
+data_original <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
+
+# Renombrar la primera columna como "Country"
+colnames(data_original)[1] <- "Country"
+
+# Seleccionar columnas de 2015 a 2019
+data_years <- data_original[, c("Country", "2015", "2016", "2017", "2018", "2019")]
+
+# Escalar solo las columnas numéricas (excluyendo "Country")
+data_scaled_2 <- scale(data_years[, -1])  # Excluye la columna "Country"
+
+# Clustering jerárquico
+hclust_result <- hclust(dist(data_scaled_2))
+clusters_hierarchical <- cutree(hclust_result, k = 3)
+
+# Combinar Country, datos originales y clusters
+data_combined_2015_2019 <- data_years %>%
+  mutate(Cluster = as.factor(clusters_hierarchical))
+
+# Intercambiar etiquetas de cluster 1 y 2
+data_combined_2015_2019 <- data_combined_2015_2019 %>%
+  mutate(
+    Cluster = case_when(
+      Cluster == "1" ~ "2",
+      Cluster == "2" ~ "1",
+      TRUE ~ as.character(Cluster)
+    ),
+    Cluster = as.factor(Cluster)
+  )
+
+# Mostrar los primeros resultados
+head(data_combined_2015_2019)
+```
+
+```{r}
+# Cargar librerías necesarias
+if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
+if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
+if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+data_long_2 <- data_combined_2015_2019 %>%
+  pivot_longer(
+    cols = starts_with("20"),    
+    names_to = "Year",           
+    values_to = "Tasa de fertilidad"      
+  ) %>%
+  mutate(
+    Year = as.numeric(Year),
+    Country = substr(Country, 1, 3)  # Abreviar país a 3 letras
+  )
+
+# Crear gráfico
+ggplot(data_long_2, aes(x = Year, y = `Tasa de fertilidad`, color = Country, group = Country)) +
+  geom_line(size = 0.8) +
+  geom_point(size = 2) +
+  facet_wrap(~Cluster, nrow = 1) +
+  scale_x_continuous(breaks = 2015:2019) +
+  theme_minimal() +
+  labs(
+    title = "Tasa de Fertilidad por País y Cluster (2015–2019)",
     subtitle = "Agrupado según clustering jerárquico",
     x = "Año",
     y = "Tasa estandarizada",
@@ -500,9 +627,99 @@ ggplot(data_long, aes(x = Year, y = Emissions, color = Country, group = Country)
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
     plot.subtitle = element_text(hjust = 0.5, size = 12),
-    legend.position = "right"
+    axis.text.x = element_text(size = 8),              # Reducir tamaño del eje X
+    legend.text = element_text(size = 8),              # Tamaño de leyenda
+    legend.title = element_text(face = "bold", size = 9),
+    legend.position = "right",
+    panel.spacing = unit(1.5, "lines")                 # Aumentar espacio entre clusters
   )
 
+```
+
+```{r}
+# Cargar librerías necesarias
+library(dplyr)
+
+# Leer el archivo original (asegúrate de tener el archivo en el directorio de trabajo)
+data_original <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
+
+# Renombrar la primera columna como "Country"
+colnames(data_original)[1] <- "Country"
+
+# Seleccionar columnas de 2020 a 2023
+data_years <- data_original[, c("Country", "2020", "2021", "2022", "2023")]
+
+# Escalar solo las columnas numéricas (excluyendo "Country")
+data_scaled_3 <- scale(data_years[, -1])  # Excluye la columna "Country"
+
+# Clustering jerárquico
+hclust_result <- hclust(dist(data_scaled_3))
+clusters_hierarchical <- cutree(hclust_result, k = 3)
+
+# Combinar Country, datos originales y clusters
+data_combined_2020_2023 <- data_years %>%
+  mutate(Cluster = as.factor(clusters_hierarchical))
+
+# Intercambiar etiquetas de cluster 1 y 2
+data_combined_2020_2023 <- data_combined_2020_2023 %>%
+  mutate(
+    Cluster = case_when(
+      Cluster == "1" ~ "2",
+      Cluster == "2" ~ "1",
+      TRUE ~ as.character(Cluster)
+    ),
+    Cluster = as.factor(Cluster)
+  )
+
+# Mostrar los primeros resultados
+head(data_combined_2020_2023)
+```
+
+```{r}
+# Cargar librerías necesarias
+if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
+if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
+if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Convertir los datos a formato largo y abreviar los nombres de país
+data_long_3 <- data_combined_2020_2023 %>%
+  pivot_longer(
+    cols = starts_with("20"),
+    names_to = "Year",
+    values_to = "Tasa de fertilidad"
+  ) %>%
+  mutate(
+    Year = as.numeric(Year),
+    Country = substr(Country, 1, 3)  # Abreviar país a 3 letras
+  )
+
+# Crear el gráfico con facetas por Cluster
+ggplot(data_long_3, aes(x = Year, y = `Tasa de fertilidad`, color = Country, group = Country)) +
+  geom_line(size = 0.8) +
+  geom_point(size = 2) +
+  facet_wrap(~Cluster, nrow = 1) +
+  scale_x_continuous(breaks = 2020:2023) +
+  theme_minimal() +
+  labs(
+    title = "Tasa de Fertilidad por País y Cluster (2020–2023)",
+    subtitle = "Agrupado según clustering jerárquico",
+    x = "Año",
+    y = "Tasa estandarizada",
+    color = "País"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    axis.text.x = element_text(size = 8),              # Reducir tamaño del eje X
+    legend.text = element_text(size = 8),
+    legend.title = element_text(face = "bold", size = 9),
+    legend.position = "right",
+    panel.spacing = unit(1.5, "lines")                 # Aumentar espacio entre clusters
+  )
 ```
 
 # Education clustering
