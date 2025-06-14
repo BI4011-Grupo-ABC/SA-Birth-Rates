@@ -511,33 +511,57 @@ ggplot(data_long, aes(x = Year, y = Emissions, color = Country, group = Country)
 library(tidyr)
 library(dplyr)
 
-pisa_scores_interpolated <- pisa_scores %>%
-  group_by(CIMA_Indicator, Country, Source, Subject, Grade, Class) %>%
-  complete(Year = full_seq(Year, 1)) %>%
-  arrange(Year) %>%
-  mutate(Value = approx(Year, Value, Year, rule=2)$y) %>%
-  ungroup()
-
-pisa_scores_interpolated_wide <- pisa_scores_interpolated %>%
-  pivot_wider(names_from = Year, values_from = Value)
-
-pisa_2010_2022 <- pisa_scores_interpolated_wide %>%
-  select(CIMA_Indicator, Country, Source, Subject, Grade, Class, `2010`:`2022`)
-
-pisa_2010_2022_science <- pisa_2010_2022 %>% 
+pisa_scores_ciencias <- pisa_scores %>%
   filter(Subject == "Ciencias")
 ```
 
-```{r}
-start_year <- 2010
-end_year <- 2014
+Merging datasets
 
-year_cols <- as.character(start_year:end_year)
-pisa_2010_2014 <- pisa_2010_2022_science[, year_cols]
-pisa_2010_2014_scaled <- scale(pisa_2010_2014)
+```{r}
+merged_data <- births_data_grouped %>%
+  inner_join(pisa_scores_ciencias,
+             by = c("ISO3 Alpha-code" = "Country", "Year" = "Year"))
+
+merged_data <- merged_data %>%
+  select(Country, `ISO3 Alpha-code`, Year, `Births_le18`, Value)
 ```
 
 ```{r}
-elbow(pisa_2010_2014_scaled)
-clusterize(pisa_2010_2014_scaled, k=3)
+m_all <- lm(merged_data$Value ~ merged_data$Births_le18 + factor(Country))
+summary(m1)
+```
+```{r}
+merged_data_peru <- merged_data %>%
+  filter(Country == "Peru")
+```
+
+```{r}
+library(dplyr)
+library(broom)
+
+# Run regression for each country
+country_models <- merged_data %>%
+  group_by(Country) %>%
+  nest() %>%  # Creates nested data frames
+  mutate(
+    # Fit model to each country's data
+    model = map(data, ~lm(Value ~ Births_le18, data = .x)),
+    # Extract results
+    tidy_results = map(model, tidy),
+    glance_results = map(model, glance)
+  )
+
+# View coefficients for all countries
+country_coefficients <- country_models %>%
+  unnest(tidy_results) %>%
+  select(Country, term, estimate, std.error, p.value)
+
+print(country_coefficients)
+
+# View model fit statistics
+country_fit <- country_models %>%
+  unnest(glance_results) %>%
+  select(Country, r.squared, adj.r.squared, p.value, nobs)
+
+print(country_fit)
 ```
