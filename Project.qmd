@@ -114,7 +114,7 @@ births_data <- births_data %>%
 library(tidyverse)
 
 births_data_grouped <- births_data %>%
-  mutate(AgeGroup = if_else(as.numeric(MothersAge) <= 18, "≤18", ">18")) %>%
+  mutate(AgeGroup = if_else(as.numeric(MothersAge) <= 18, "le18", "g18")) %>%
   group_by(Country, `ISO3 Alpha-code`, Year, AgeGroup) %>%
   summarise(
     Births = sum(Births, na.rm = TRUE),
@@ -128,8 +128,8 @@ births_data_grouped <- births_data %>%
 
 births_data_grouped <- births_data_grouped %>%
   mutate(
-    `BirthRate_≤18`  = (`Births_≤18` / `TotalWomen_≤18`) * 1000 * 1000,
-    `BirthRate_>18`  = (`Births_>18` / `TotalWomen_>18`) * 1000 * 1000
+    `BirthRate_le18`  = (`Births_le18` / `TotalWomen_le18`) * 1000 * 1000,
+    `BirthRate_g18`  = (`Births_g18` / `TotalWomen_g18`) * 1000 * 1000
   )
 ```
 
@@ -155,8 +155,8 @@ graph_age <- function(age) {
     )
 }
 
-graph_age("BirthRate_≤18")
-graph_age("BirthRate_>18")
+graph_age("BirthRate_le18")
+graph_age("BirthRate_g18")
 ```
 
 ```{r}
