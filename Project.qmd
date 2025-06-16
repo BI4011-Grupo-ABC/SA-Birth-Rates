@@ -456,7 +456,7 @@ end_year <- 2023
 year_cols <- as.character(start_year:end_year)
 data_range_3 <- tabla_resumen[, year_cols]
 
-rownames(data_range_) <- substr(tabla_resumen$Country, 1, 3)
+rownames(data_range_3) <- substr(tabla_resumen$Country, 1, 3)
 
 data_scaled_3 <- scale(data_range_3)
 ```
@@ -744,8 +744,8 @@ merged_data <- merged_data %>%
 ```
 
 ```{r}
-summary(m1)
 m_all <- lm(merged_data$Value ~ merged_data$FertilityRate_le18)
+summary(m_all)
 ```
 ```{r}
 merged_data_peru <- merged_data %>%
