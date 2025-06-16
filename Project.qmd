@@ -128,8 +128,8 @@ births_data_grouped <- births_data %>%
 
 births_data_grouped <- births_data_grouped %>%
   mutate(
-    `BirthRate_le18`  = (`Births_le18` / `TotalWomen_le18`) * 1000 * 1000,
-    `BirthRate_g18`  = (`Births_g18` / `TotalWomen_g18`) * 1000 * 1000
+    `FertilityRate_le18`  = (`Births_le18` / `TotalWomen_le18`) * 1000 * 1000,
+    `FertilityRate_g18`  = (`Births_g18` / `TotalWomen_g18`) * 1000 * 1000
   )
 ```
 
@@ -155,8 +155,8 @@ graph_age <- function(age) {
     )
 }
 
-graph_age("BirthRate_le18")
-graph_age("BirthRate_g18")
+graph_age("FertilityRate_le18")
+graph_age("FertilityRate_g18")
 ```
 
 ```{r}
@@ -740,16 +740,18 @@ merged_data <- births_data_grouped %>%
              by = c("ISO3 Alpha-code" = "Country", "Year" = "Year"))
 
 merged_data <- merged_data %>%
-  select(Country, `ISO3 Alpha-code`, Year, `Births_le18`, Value)
+  select(Country, `ISO3 Alpha-code`, Year, `FertilityRate_le18`, Value)
 ```
 
 ```{r}
-m_all <- lm(merged_data$Value ~ merged_data$Births_le18 + factor(Country))
 summary(m1)
+m_all <- lm(merged_data$Value ~ merged_data$FertilityRate_le18)
 ```
 ```{r}
 merged_data_peru <- merged_data %>%
   filter(Country == "Peru")
+m_peru <- lm(merged_data_peru$Value ~ merged_data_peru$FertilityRate_le18)
+summary(m_peru)
 ```
 
 ```{r}
@@ -762,7 +764,7 @@ country_models <- merged_data %>%
   nest() %>%  # Creates nested data frames
   mutate(
     # Fit model to each country's data
-    model = map(data, ~lm(Value ~ Births_le18, data = .x)),
+    model = map(data, ~lm(Value ~ FertilityRate_le18, data = .x)),
     # Extract results
     tidy_results = map(model, tidy),
     glance_results = map(model, glance)
