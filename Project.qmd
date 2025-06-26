@@ -747,7 +747,8 @@ library(tidyr)
 library(dplyr)
 
 pisa_scores_ciencias <- pisa_scores %>%
-  filter(Subject == "Ciencias")
+  filter(Subject == "Ciencias") %>%
+  rename(PisaCiencias = Value)
 ```
 
 Merging datasets
@@ -758,11 +759,25 @@ merged_data <- births_data_grouped %>%
              by = c("ISO3 Alpha-code" = "Country", "Year" = "Year"))
 
 merged_data <- merged_data %>%
-  select(Country, `ISO3 Alpha-code`, Year, `FertilityRate_le18`, Value)
+  select(Country, `ISO3 Alpha-code`, Year, `FertilityRate_le18`, PisaCiencias)
 ```
 
 ```{r}
-m_all <- lm(merged_data$FertilityRate_le18 ~ merged_data$Value)
+hdi_countries <- read_excel("Data/HDI_countries.xlsx")
+
+hdi_countries <- hdi_countries %>%
+  filter(`countryIsoCode` %in% latam_iso3) %>%
+  select(countryIsoCode, year, value) %>%
+  mutate(year = as.double(year)) %>%
+  rename(hdi = value)
+
+merged_data <- merged_data %>%
+  full_join(hdi_countries,
+            by = c("ISO3 Alpha-code" = "countryIsoCode", "Year" = "year"))
+```
+
+```{r}
+m_all <- lm(merged_data$FertilityRate_le18 ~ merged_data$PisaCiencias)
 summary(m_all)
 ```
 
@@ -770,6 +785,7 @@ summary(m_all)
 merged_data_peru <- merged_data %>%
   filter(Country == "Peru")
 m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$Value)
+m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$PisaCiencias)
 summary(m_peru)
 ```
 
@@ -783,7 +799,7 @@ country_models <- merged_data %>%
   nest() %>%  # Creates nested data frames
   mutate(
     # Fit model to each country's data
-    model = map(data, ~lm(FertilityRate_le18 ~ Value, data = .x)),
+    model = map(data, ~lm(FertilityRate_le18 ~ PisaCiencias, data = .x)),
     # Extract results
     tidy_results = map(model, tidy),
     glance_results = map(model, glance)
@@ -812,7 +828,7 @@ library(ggplot2)
 library(gridExtra)
 
 # 1. Ajuste del modelo lineal simple
-m_all <- lm(FertilityRate_le18 ~ Value, data = merged_data)
+m_all <- lm(FertilityRate_le18 ~ PisaCiencias, data = merged_data)
 summary(m_all)
 
 # 2. Prueba RESET de especificación (linealidad)
@@ -821,7 +837,7 @@ resettest(m_all)
 # 3. Gráficos de residuos para evaluar linealidad
 
 # Residuos vs. PISA (Value)
-Linealidad1 <- ggplot(data = merged_data, aes(Value, resid(m_all))) +
+Linealidad1 <- ggplot(data = merged_data, aes(PisaCiencias, resid(m_all))) +
   geom_point() +
   geom_smooth(color = "firebrick") +
   geom_hline(yintercept = 0) +
@@ -841,11 +857,11 @@ Linealidad2 <- ggplot(data = merged_data, aes(Year, resid(m_all))) +
 grid.arrange(Linealidad1, Linealidad2)
 
 # 4. Si la prueba RESET sugiere no linealidad, ajustar un modelo polinomial
-m_all2 <- lm(FertilityRate_le18 ~ Value + I(Value^2), data = merged_data)
+m_all2 <- lm(FertilityRate_le18 ~ PisaCiencias + I(PisaCiencias^2), data = merged_data)
 summary(m_all2)
 
 # Volver a graficar residuos con el modelo cuadrático
-Linealidad1_poly <- ggplot(data = merged_data, aes(Value, resid(m_all2))) +
+Linealidad1_poly <- ggplot(data = merged_data, aes(PisaCiencias, resid(m_all2))) +
   geom_point() +
   geom_smooth(color = "blue") +
   geom_hline(yintercept = 0) +
@@ -856,11 +872,11 @@ grid.arrange(Linealidad1_poly)
 
 # 5. (Opcional) Ajuste con GAM si la relación sigue siendo compleja
 library(mgcv)
-m_gam <- gam(FertilityRate_le18 ~ s(Value) + s(Year), data = merged_data)
+m_gam <- gam(FertilityRate_le18 ~ s(PisaCiencias) + s(Year), data = merged_data)
 summary(m_gam)
 
 # Gráfico de residuos para el GAM
-Linealidad1_gam <- ggplot(data = merged_data, aes(Value, resid(m_gam))) +
+Linealidad1_gam <- ggplot(data = merged_data, aes(PisaCiencias, resid(m_gam))) +
   geom_point() +
   geom_smooth(color = "darkgreen") +
   geom_hline(yintercept = 0) +
