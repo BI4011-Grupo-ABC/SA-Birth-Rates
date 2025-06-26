@@ -366,14 +366,23 @@ ggplot(fertilidad_total_mod, aes(x = Year, y = TotalFertility, color = Pais_Abre
 ```
 
 ```{r}
-elbow = function(data) {
+elbow_and_silhouette <- function(data) {
   library(factoextra)
-  # determine the maximum number of clusters
-  n_obs <- nrow(data)  # number of rows in the scaled data
-  
-  # plot the elbow method with a limit on the number of clusters
-  fviz_nbclust(data, kmeans, method = "wss", k.max = min(10, n_obs - 1)) +
-    labs(title = "elbow method to determine the optimal number of clusters for ...")
+  library(gridExtra)
+
+  n_obs <- nrow(data)
+  k_max <- min(10, n_obs - 1)
+
+  # Elbow method (WSS)
+  elbow_plot <- fviz_nbclust(data, kmeans, method = "wss", k.max = k_max) +
+    labs(title = "Elbow Method (WSS)")
+
+  # Silhouette method
+  silhouette_plot <- fviz_nbclust(data, kmeans, method = "silhouette", k.max = k_max) +
+    labs(title = "Silhouette Method")
+
+  # Combine plots side by side
+  grid.arrange(elbow_plot, silhouette_plot, ncol = 2)
 }
 ```
 
@@ -427,7 +436,7 @@ data_scaled_1 <- scale(data_range_1)
 ```
 
 ```{r}
-elbow(data_scaled_1)
+elbow_and_silhouette(data_scaled_1)
 ```
 
 ```{r}
@@ -449,7 +458,7 @@ data_scaled_2 <- scale(data_range_2)
 ```
 
 ```{r}
-elbow(data_scaled_2)
+elbow_and_silhouette(data_scaled_2)
 clusterize(data_scaled_2, 3)
 ```
 
@@ -466,7 +475,7 @@ data_scaled_3 <- scale(data_range_3)
 ```
 
 ```{r}
-elbow(data_scaled_3)
+elbow_and_silhouette(data_scaled_3)
 clusterize(data_scaled_3, 3)
 ```
 
