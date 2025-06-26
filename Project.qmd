@@ -803,12 +803,69 @@ country_fit <- country_models %>%
 
 print(country_fit)
 ```
+```{r}
+# Cargar librerías necesarias
+library(tidyverse)
+library(lmtest)
+library(ggplot2)
+library(gridExtra)
 
-```{}
+# 1. Ajuste del modelo lineal simple
+m_all <- lm(FertilityRate_le18 ~ Value, data = merged_data)
+summary(m_all)
+
+# 2. Prueba RESET de especificación (linealidad)
+resettest(m_all)
+
+# 3. Gráficos de residuos para evaluar linealidad
+
+# Residuos vs. PISA (Value)
+Linealidad1 <- ggplot(data = merged_data, aes(Value, resid(m_all))) +
+  geom_point() +
+  geom_smooth(color = "firebrick") +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  labs(title = "Residuos vs. PISA Score (Value)", y = "Residuos")
+
+# Residuos vs. Year
+Linealidad2 <- ggplot(data = merged_data, aes(Year, resid(m_all))) +
+  geom_point() +
+  geom_smooth(color = "firebrick") +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  labs(title = "Residuos vs. Year", y = "Residuos")
+
+# Mostrar ambos gráficos juntos
+grid.arrange(Linealidad1, Linealidad2)
+
+# 4. Si la prueba RESET sugiere no linealidad, ajustar un modelo polinomial
+m_all2 <- lm(FertilityRate_le18 ~ Value + I(Value^2), data = merged_data)
+summary(m_all2)
+
+# Volver a graficar residuos con el modelo cuadrático
+Linealidad1_poly <- ggplot(data = merged_data, aes(Value, resid(m_all2))) +
+  geom_point() +
+  geom_smooth(color = "blue") +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  labs(title = "Residuos vs. PISA Score (Modelo Cuadrático)", y = "Residuos")
+
+grid.arrange(Linealidad1_poly)
+
+# 5. (Opcional) Ajuste con GAM si la relación sigue siendo compleja
+library(mgcv)
+m_gam <- gam(FertilityRate_le18 ~ s(Value) + s(Year), data = merged_data)
+summary(m_gam)
+
+# Gráfico de residuos para el GAM
+Linealidad1_gam <- ggplot(data = merged_data, aes(Value, resid(m_gam))) +
+  geom_point() +
+  geom_smooth(color = "darkgreen") +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  labs(title = "Residuos vs. PISA Score (Modelo GAM)", y = "Residuos")
+
+grid.arrange(Linealidad1_gam)
+
 ```
 
-```{}
-```
-
-```{}
-```
