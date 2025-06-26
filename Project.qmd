@@ -768,7 +768,7 @@ summary(m_all)
 
 ```{r}
 merged_data_peru <- merged_data %>%
-  filter(Country == "PER")
+  filter(Country == "Peru")
 m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$Value)
 summary(m_peru)
 ```
@@ -827,13 +827,14 @@ Linealidad1 <- ggplot(data = merged_data, aes(Value, resid(m_all))) +
   theme_bw() +
   labs(title = "Residuos vs. PISA Score (Value)", y = "Residuos")
 
-# Residuos vs. Year
+# Residuos vs. Year (ajustando el eje a años enteros)
 Linealidad2 <- ggplot(data = merged_data, aes(Year, resid(m_all))) +
   geom_point() +
   geom_smooth(color = "firebrick") +
   geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = seq(min(merged_data$Year), max(merged_data$Year), 1)) +
   theme_bw() +
-  labs(title = "Residuos vs. Year", y = "Residuos")
+  labs(title = "Residuos vs. Year", y = "Residuos", x = "Año")
 
 # Mostrar ambos gráficos juntos
 grid.arrange(Linealidad1, Linealidad2)
@@ -866,6 +867,7 @@ Linealidad1_gam <- ggplot(data = merged_data, aes(Value, resid(m_gam))) +
   labs(title = "Residuos vs. PISA Score (Modelo GAM)", y = "Residuos")
 
 grid.arrange(Linealidad1_gam)
+
 
 ```
 
