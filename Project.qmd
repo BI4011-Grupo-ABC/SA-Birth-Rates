@@ -762,14 +762,14 @@ merged_data <- merged_data %>%
 ```
 
 ```{r}
-m_all <- lm(merged_data$Value ~ merged_data$FertilityRate_le18)
+m_all <- lm(merged_data$FertilityRate_le18 ~ merged_data$Value)
 summary(m_all)
 ```
 
 ```{r}
 merged_data_peru <- merged_data %>%
-  filter(Country == "Peru")
-m_peru <- lm(merged_data_peru$Value ~ merged_data_peru$FertilityRate_le18)
+  filter(Country == "PER")
+m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$Value)
 summary(m_peru)
 ```
 
@@ -783,7 +783,7 @@ country_models <- merged_data %>%
   nest() %>%  # Creates nested data frames
   mutate(
     # Fit model to each country's data
-    model = map(data, ~lm(Value ~ FertilityRate_le18, data = .x)),
+    model = map(data, ~lm(FertilityRate_le18 ~ Value, data = .x)),
     # Extract results
     tidy_results = map(model, tidy),
     glance_results = map(model, glance)
