@@ -803,6 +803,7 @@ country_fit <- country_models %>%
 
 print(country_fit)
 ```
+
 ```{r}
 # Cargar librerías necesarias
 library(tidyverse)
@@ -889,6 +890,7 @@ qqPlot(resid(m_all), main = "Q-Q Plot de residuos")
 # Si los puntos siguen aproximadamente la línea diagonal, no se rechaza la normalidad.
 
 ```
+
 ```{r}
 ## Homocedasticidad de los residuos
 
@@ -908,6 +910,7 @@ ggplot(data = merged_data, aes(m_all$fitted.values, resid(m_all))) +
   labs(x = "Valores Ajustados", y = "Residuos", title = "Residuos vs. Valores Ajustados")
 
 ```
+
 ```{r}
 ### Verificación de los supuestos de Linealidad, Independencia, Normalidad y Homocedasticidad a la vez
 ## Verificación conjunta de los supuestos con ggfortify
@@ -918,5 +921,3 @@ library(ggfortify)
 # Graficar los 4 gráficos diagnósticos clásicos
 autoplot(m_all)
 ```
-
-
