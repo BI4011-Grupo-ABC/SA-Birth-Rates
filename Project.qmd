@@ -869,3 +869,52 @@ grid.arrange(Linealidad1_gam)
 
 ```
 
+```{r}
+## Normalidad de los residuos
+
+# Realizamos la prueba de Shapiro-Wilk
+shapiro_test <- shapiro.test(resid(m_all))
+shapiro_test
+
+# Interpretación:
+# Si el p-valor es mayor a 0.05, no se rechaza la hipótesis de normalidad.
+
+# Realizamos el gráfico Q-Q Plot
+library(car)
+qqPlot(resid(m_all), main = "Q-Q Plot de residuos")
+
+# Conclusión esperada:
+# Si los puntos siguen aproximadamente la línea diagonal, no se rechaza la normalidad.
+
+```
+```{r}
+## Homocedasticidad de los residuos
+
+# Prueba de Breusch-Pagan (H0: Homocedasticidad, Ha: Heterocedasticidad)
+library(lmtest)
+lmtest::bptest(m_all)
+
+# Interpretación:
+# Si el p-valor es menor a 0.05, se rechaza la hipótesis de homocedasticidad (es decir, hay heterocedasticidad).
+
+# Gráfico de residuos vs. valores ajustados
+ggplot(data = merged_data, aes(m_all$fitted.values, resid(m_all))) +
+  geom_point() +
+  geom_smooth(color = "firebrick", se = FALSE) +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  labs(x = "Valores Ajustados", y = "Residuos", title = "Residuos vs. Valores Ajustados")
+
+```
+```{r}
+### Verificación de los supuestos de Linealidad, Independencia, Normalidad y Homocedasticidad a la vez
+## Verificación conjunta de los supuestos con ggfortify
+
+# Cargar la librería ggfortify
+library(ggfortify)
+
+# Graficar los 4 gráficos diagnósticos clásicos
+autoplot(m_all)
+```
+
+
