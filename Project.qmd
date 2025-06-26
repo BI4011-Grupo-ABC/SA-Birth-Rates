@@ -788,6 +788,26 @@ m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$PisaCiencias
 summary(m_peru)
 ```
 
+-------------------------------------------------------------
+
+GDP
+
+```{r}
+gdp_countries <- read_excel("Data/gdp_per_capita_ppp.xlsx")
+
+gdp_countries <- gdp_countries %>%
+  filter(`Code` %in% latam_iso3) %>%
+  rename(gdp = `GDP per capita, PPP (constant 2021 international $)`) %>%
+  select(Code, Year, gdp) %>%
+  mutate(Year = as.double(Year))
+
+merged_data <- merged_data %>%
+  full_join(gdp_countries,
+            by = c("ISO3 Alpha-code" = "Code", "Year" = "Year"))
+```
+
+---------------------------------------------------------------------------------
+
 ```{r}
 library(dplyr)
 library(broom)
