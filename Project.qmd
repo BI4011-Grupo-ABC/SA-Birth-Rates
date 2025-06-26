@@ -138,20 +138,25 @@ library(ggplot2)
 library(tidyverse)
 library(glue)
 
+# Crear una columna abreviada para la leyenda
+births_data_grouped <- births_data_grouped %>%
+  mutate(Country_abbr = substr(Country, 1, 3))
+
 graph_age <- function(age) {
-  ggplot(births_data_grouped, aes(x = Year, y = .data[[age]], color = Country, group = Country)) +
-    geom_line(size = 0.8) +  # Adjust the line thickness
+  ggplot(births_data_grouped, aes(x = Year, y = .data[[age]], color = Country_abbr, group = Country)) +
+    geom_line(size = 0.8) +
     geom_point() +
     labs(
       title = glue("Fertility rates in {age}"),
       subtitle = "(births per 1,000 women)",
       x = "Year",
-      y = "Birth rates"
+      y = "Birth rates",
+      color = "Country"
     ) +
     theme_minimal() +
     theme(
       legend.position = "right",
-      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold")
     )
 }
 
@@ -760,6 +765,7 @@ merged_data <- merged_data %>%
 m_all <- lm(merged_data$Value ~ merged_data$FertilityRate_le18)
 summary(m_all)
 ```
+
 ```{r}
 merged_data_peru <- merged_data %>%
   filter(Country == "Peru")
