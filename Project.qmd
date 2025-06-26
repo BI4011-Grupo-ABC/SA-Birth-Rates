@@ -763,6 +763,20 @@ merged_data <- merged_data %>%
 ```
 
 ```{r}
+hdi_countries <- read_excel("Data/HDI_countries.xlsx")
+
+hdi_countries <- hdi_countries %>%
+  filter(`countryIsoCode` %in% latam_iso3) %>%
+  select(countryIsoCode, year, value) %>%
+  mutate(year = as.double(year)) %>%
+  rename(hdi = value)
+
+merged_data <- merged_data %>%
+  full_join(hdi_countries,
+            by = c("ISO3 Alpha-code" = "countryIsoCode", "Year" = "year"))
+```
+
+```{r}
 m_all <- lm(merged_data$FertilityRate_le18 ~ merged_data$PisaCiencias)
 summary(m_all)
 ```
