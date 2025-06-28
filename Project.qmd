@@ -784,7 +784,6 @@ summary(m_all)
 ```{r}
 merged_data_peru <- merged_data %>%
   filter(Country == "Peru")
-m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$Value)
 m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$PisaCiencias)
 summary(m_peru)
 ```
