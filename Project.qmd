@@ -342,10 +342,6 @@ tabla_resumen <- fertilidad_total %>%
 
 # Paso 3: Ver tabla
 View(tabla_resumen)
-
-# (Opcional) Guardar como CSV
-write.csv(tabla_resumen, "tabla_resumen_fertilidad_transpuesta.csv", row.names = FALSE)
-
 ```
 
 ```{r}
