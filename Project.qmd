@@ -1029,3 +1029,166 @@ summary(modelo_nb)
 
 ```
 
+```{r}
+poisson_model <- glm(
+  Births_le18 ~  education_completion_rate.x + hdi + gdp + Year,
+  data = merged_data,
+  family = poisson(link = "log"),
+  offset = log(TotalWomen_le18)
+)
+summary(poisson_model)
+
+```
+
+```{r}
+dispersion <- sum(residuals(poisson_model, type = "pearson")^2) / poisson_model$df.residual
+dispersion
+```
+```{r}
+# Instalar si no está instalado
+# install.packages("MASS")
+# install.packages("pscl")
+
+library(MASS)
+library(pscl)
+
+# Modelo Binomial Negativa para predecir Births_le18
+Modelo_BN <- glm.nb(
+  Births_le18 ~ education_completion_rate.x + hdi + gdp + Year + offset(log(TotalWomen_le18)),
+  data = merged_data
+)
+
+# Resumen del modelo
+summary(Modelo_BN)
+
+# AIC: puedes comparar con otros modelos si ya los has definido
+# AIC(Modelo_Poisson, Modelo_QP, Modelo_BN) # Solo si has creado los otros modelos
+
+# Coeficientes exponenciados con intervalos de confianza
+exp(cbind(coef(Modelo_BN), confint(Modelo_BN)))
+
+```
+
+```{r}
+AIC(poisson_model, Modelo_BN)
+
+```
+
+```{r}
+plot(fitted(Modelo_BN), residuals(Modelo_BN, type = "deviance"),
+     xlab = "Valores ajustados", ylab = "Residuos de devianza",
+     main = "Residuos vs Ajustados")
+abline(h = 0, col = "red")
+
+```
+
+```{r}
+hist(residuals(Modelo_BN, type = "pearson"), breaks = 20,
+     main = "Histograma de residuos", xlab = "Residuos de Pearson")
+
+```
+```{r}
+qqnorm(residuals(Modelo_BN, type = "pearson"))
+qqline(residuals(Modelo_BN, type = "pearson"), col = "red")
+
+```
+```{r}
+library(pscl)
+pR2(Modelo_BN)
+
+```
+
+```{r}
+plot(merged_data$Births_le18, fitted(Modelo_BN),
+     xlab = "Nacimientos observados", ylab = "Nacimientos predichos",
+     main = "Observados vs Predichos")
+abline(0, 1, col = "blue")
+
+```
+
+
+```{r}
+# Agregar las predicciones al dataframe original
+merged_data$pred_BN <- predict(Modelo_BN, type = "response")
+
+```
+
+```{r}
+# Extraer coeficientes como data frame
+coef_df <- as.data.frame(summary(Modelo_BN)$coefficients)
+
+# Agregar nombres de las variables como columna
+coef_df$Variable <- rownames(coef_df)
+
+# Reordenar columnas
+coef_df <- coef_df[, c("Variable", "Estimate", "Std. Error", "z value", "Pr(>|z|)")]
+
+
+```
+
+```{r}
+library(pscl)
+
+r2 <- pR2(Modelo_BN)["McFadden"]
+aic <- AIC(Modelo_BN)
+
+# Guardar como data.frame
+metricas_df <- data.frame(
+  Modelo = "Binomial Negativa",
+  McFadden_R2 = r2,
+  AIC = aic
+)
+```
+
+# Comparando Poisson y Binomial Negativa
+
+```{r}
+res_dev <- deviance(poisson_model)
+df <- df.residual(poisson_model)
+dispersion_ratio <- res_dev / df
+dispersion_ratio
+```
+```{r}
+library(lmtest)
+lrtest(poisson_model, Modelo_BN)
+
+```
+```{r}
+AIC(poisson_model, Modelo_BN)
+
+```
+
+
+
+```{r}
+library(MASS)
+
+Modelo_BN_bivariado <- glm.nb(
+  Births_le18 ~ education_completion_rate.x + offset(log(TotalWomen_le18)),
+  data = merged_data
+)
+```
+
+```{r}
+summary(Modelo_BN_bivariado)
+```
+```{r}
+exp(coef(Modelo_BN_bivariado))
+```
+
+```{r}
+exp(confint(Modelo_BN_bivariado))
+```
+
+```{r}
+summary(Modelo_BN_bivariado)
+summary(Modelo_BN)
+
+```
+
+```{r}
+AIC(Modelo_BN_bivariado, Modelo_BN)
+library(lmtest)
+lrtest(Modelo_BN_bivariado, Modelo_BN)
+```
+
