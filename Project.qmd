@@ -805,8 +805,9 @@ gdp_countries <- gdp_countries %>%
   select(Code, Year, gdp) %>%
   mutate(Year = as.double(Year))
 
+# XXX: No data for Venezuela's GDP
 merged_data <- merged_data %>%
-  full_join(gdp_countries,
+  inner_join(gdp_countries,
             by = c("ISO3 Alpha-code" = "Code", "Year" = "Year"))
 ```
 
