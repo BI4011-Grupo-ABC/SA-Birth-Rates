@@ -752,7 +752,7 @@ Merging datasets
 
 ```{r}
 merged_data <- births_data_grouped %>%
-  select(Country, `ISO3 Alpha-code`, Year, `FertilityRate_le18`)
+  select(Country, `ISO3 Alpha-code`, Year, `TotalWomen_le18`, `Births_le18`,`FertilityRate_le18` )
 ```
 
 ```{r}
@@ -772,9 +772,10 @@ hdi_countries <- read_excel("Data/HDI_countries.xlsx")
 
 hdi_countries <- hdi_countries %>%
   filter(`countryIsoCode` %in% latam_iso3) %>%
-  select(countryIsoCode, year, value) %>%
+  dplyr::select(countryIsoCode, year, value) %>%
   mutate(year = as.double(year)) %>%
-  rename(hdi = value)
+  rename(hdi = value) %>%
+  mutate(hdi = as.numeric(hdi))
 
 merged_data <- merged_data %>%
   left_join(hdi_countries,
@@ -793,9 +794,9 @@ m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$education_co
 summary(m_peru)
 ```
 
--------------------------------------------------------------
 
-GDP
+
+
 
 ```{r}
 gdp_countries <- read_excel("Data/gdp_per_capita_ppp.xlsx")
@@ -812,7 +813,9 @@ merged_data <- merged_data %>%
             by = c("ISO3 Alpha-code" = "Code", "Year" = "Year"))
 ```
 
----------------------------------------------------------------------------------
+
+
+
 
 ```{r}
 library(dplyr)
@@ -962,3 +965,67 @@ library(ggfortify)
 # Graficar los 4 gráficos diagnósticos clásicos
 autoplot(m_all)
 ```
+
+
+
+
+```{r}
+
+# Primero, asegúrate de que los nombres de columnas coincidan
+# Por ejemplo, si en education_completion_rate se llama "pais", renombramos:
+education_completion_rates <- education_completion_rates %>%
+  rename(Country = geoUnit, Year = year)
+```
+
+```{r}
+# Luego hacemos el join
+merged_data <- merged_data %>%
+  left_join(education_completion_rates, by = c("ISO3 Alpha-code" = "Country", "Year" = "Year" ))
+```
+
+```{r}
+# Eliminar filas con valores NA en variables relevantes
+data_poisson <- merged_data %>%
+  select(Country, Year, Births_le18, education_completion_rate.x, TotalWomen_le18, hdi, gdp) %>%
+  na.omit()
+
+```
+
+```{r}
+# Cargar librería si no está cargada
+library(stats)
+
+# Modelo de Poisson
+modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+                      data = data_poisson,
+                      family = poisson(link = "log"))
+
+# Ver resultados
+summary(modelo_poisson)
+
+```
+```{r}
+# Calcular ratio de sobredispersión
+dispersion <- sum(residuals(modelo_poisson, type = "pearson")^2) / modelo_poisson$df.residual
+dispersion
+
+```
+
+```{r}
+modelo_quasi <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+                    data = data_poisson,
+                    family = quasipoisson(link = "log"))
+
+summary(modelo_quasi)
+```
+
+```{r}
+library(MASS)
+
+modelo_nb <- glm.nb(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+                    data = data_poisson)
+
+summary(modelo_nb)
+
+```
+
