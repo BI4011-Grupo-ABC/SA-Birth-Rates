@@ -771,18 +771,16 @@ merged_data <- merged_data %>%
 ```
 
 ```{r}
-hdi_countries <- read_excel("Data/HDI_countries.xlsx")
+life_expectancy <- read_csv("Data/life-expectancy.csv")
 
-hdi_countries <- hdi_countries %>%
-  filter(`countryIsoCode` %in% latam_iso3) %>%
-  dplyr::select(countryIsoCode, year, value) %>%
-  mutate(year = as.double(year)) %>%
-  rename(hdi = value) %>%
-  mutate(hdi = as.numeric(hdi))
+life_expectancy <- life_expectancy %>%
+  filter(Code %in% latam_iso3) %>%
+  rename(life_expectancy = `Period life expectancy at birth - Sex: total - Age: 0`) %>%
+  dplyr::select(Code, Year, life_expectancy)
 
 merged_data <- merged_data %>%
-  left_join(hdi_countries,
-            by = c("ISO3 Alpha-code" = "countryIsoCode", "Year" = "year"))
+  left_join(life_expectancy,
+            by = c("ISO3 Alpha-code" = "Code", "Year" = "Year"))
 ```
 
 ```{r}
@@ -989,7 +987,7 @@ merged_data <- merged_data %>%
 ```{r}
 # Eliminar filas con valores NA en variables relevantes
 data_poisson <- merged_data %>%
-  select(Country, Year, Births_le18, education_completion_rate.x, TotalWomen_le18, hdi, gdp_per_capita) %>%
+  select(Country, Year, Births_le18, education_completion_rate.x, TotalWomen_le18, life_expectancy, gdp_per_capita) %>%
   na.omit()
 
 ```
@@ -999,7 +997,7 @@ data_poisson <- merged_data %>%
 library(stats)
 
 # Modelo de Poisson
-modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp_per_capita,
+modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + life_expectancy + gdp_per_capita,
                       data = data_poisson,
                       family = poisson(link = "log"))
 
@@ -1015,7 +1013,7 @@ dispersion
 ```
 
 ```{r}
-modelo_quasi <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp_per_capita,
+modelo_quasi <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + life_expectancy + gdp_per_capita,
                     data = data_poisson,
                     family = quasipoisson(link = "log"))
 
@@ -1025,7 +1023,7 @@ summary(modelo_quasi)
 ```{r}
 library(MASS)
 
-modelo_nb <- glm.nb(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp_per_capita,
+modelo_nb <- glm.nb(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + life_expectancy + gdp_per_capita,
                     data = data_poisson)
 
 summary(modelo_nb)
@@ -1034,7 +1032,7 @@ summary(modelo_nb)
 
 ```{r}
 poisson_model <- glm(
-  Births_le18 ~  education_completion_rate.x + hdi + gdp_per_capita + Year,
+  Births_le18 ~  education_completion_rate.x + life_expectancy + gdp_per_capita + Year,
   data = merged_data,
   family = poisson(link = "log"),
   offset = log(TotalWomen_le18)
@@ -1057,7 +1055,7 @@ library(pscl)
 
 # Modelo Binomial Negativa para predecir Births_le18
 Modelo_BN <- glm.nb(
-  Births_le18 ~ education_completion_rate.x + hdi + gdp_per_capita + Year + offset(log(TotalWomen_le18)),
+  Births_le18 ~ education_completion_rate.x + life_expectancy + gdp_per_capita + Year + offset(log(TotalWomen_le18)),
   data = merged_data
 )
 
@@ -1103,7 +1101,7 @@ irr_data$Variable <- rownames(irr_data)
 
 # Reordenar las variables para una mejor visualización (opcional)
 irr_data$Variable <- factor(irr_data$Variable,
-                             levels = c("Year", "gdp_per_capita", "hdi", "education_completion_rate.x", "(Intercept)"))
+                             levels = c("Year", "gdp_per_capita", "life_expectancy", "education_completion_rate.x", "(Intercept)"))
 
 # Excluir el intercepto para la visualización, ya que su IRR suele ser difícil de interpretar
 # y a menudo de una escala muy diferente
@@ -1133,11 +1131,11 @@ ggplot(irr_data_plot, aes(x = Variable, y = IRR)) +
 
 ```{r}
 library(ggplot2)
-ggplot(merged_data, aes(x = hdi, y = Births_le18 / TotalWomen_le18)) +
+ggplot(merged_data, aes(x = life_expectancy, y = Births_le18 / TotalWomen_le18)) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "glm.nb", formula = y ~ x, se = FALSE, color = "blue") + # O method = "lm" si quieres una línea recta
-  labs(title = "Tasa de Fertilidad Adolescente vs. HDI",
-       x = "HDI",
+  labs(title = "Tasa de Fertilidad Adolescente vs. Life Expectancy",
+       x = "Life Expectancy",
        y = "Tasa de Nacimientos (<18)") +
   theme_minimal()
 ```
