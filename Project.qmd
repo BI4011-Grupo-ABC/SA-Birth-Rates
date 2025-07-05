@@ -737,6 +737,83 @@ ggplot(data_long_3, aes(x = Year, y = `Tasa de fertilidad`, color = Country, gro
   )
 ```
 
+```{r}
+# Cargar librerías necesarias
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(RColorBrewer)
+library(glue)
+
+# Leer el archivo de fertilidad
+fertility_data <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
+
+# Transformar a formato largo
+fertility_data_long <- fertility_data %>%
+  pivot_longer(
+    cols = -Country,
+    names_to = "Year",
+    values_to = "FertilityRate_le18"
+  ) %>%
+  mutate(Year = as.numeric(Year))
+
+# Obtener el mapa de Sudamérica
+south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
+
+# Función para graficar mapas de fertilidad con leyenda por rangos
+draw_heat_map_fertility <- function() {
+  message("Generando mapa de Fertilidad...")
+
+  # Hacer la unión usando nombre de país
+  map_data <- south_america %>%
+    left_join(fertility_data_long, by = c("name_long" = "Country")) %>%
+    drop_na(Year)
+
+  # Filtrar solo los años deseados
+  map_data <- map_data %>% filter(Year %in% c(2010, 2014, 2019, 2023))
+
+  # Crear categorías/rangos personalizados
+  breaks <- seq(floor(min(map_data$FertilityRate_le18, na.rm = TRUE)),
+                ceiling(max(map_data$FertilityRate_le18, na.rm = TRUE)),
+                length.out = 6)  # Puedes ajustar el número de rangos
+
+  map_data <- map_data %>%
+    mutate(FertilityRateRange = cut(FertilityRate_le18, breaks = breaks, include.lowest = TRUE))
+
+  # Crear el mapa con leyenda categórica
+  ggplot(data = map_data) +
+    geom_sf(aes(fill = FertilityRateRange), color = "black") +
+    scale_fill_brewer(palette = "Oranges", na.value = "gray90", name = "Fertility Rate\n(<18 years)") +
+    labs(
+      title = "Fertility Rates (<18 years) in South America",
+      subtitle = ""
+    ) +
+    facet_wrap(~Year, ncol = 4) +  # 4 mapas en una fila
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title = element_blank(),
+      strip.text = element_text(face = "bold", size = 10),
+      legend.position = "right",
+      legend.direction = "vertical",
+      legend.text = element_text(size = 8),
+      legend.title = element_text(face = "bold", size = 9),
+      legend.key.height = unit(0.5, "cm"),
+      panel.grid = element_blank(),
+      panel.spacing = unit(0.5, "lines")
+    )
+}
+
+# Ejecutar la función
+draw_heat_map_fertility()
+
+
+```
+
 # Education clustering
 
 ```{r}
@@ -768,6 +845,72 @@ merged_data <- merged_data %>%
 ```
 
 ```{r}
+# Función para graficar solo los años seleccionados con leyenda por rangos en fila
+draw_selected_education_maps_horizontal <- function() {
+  message("Generando mapa de educación en fila horizontal con leyenda por rangos...")
+
+  # Años específicos que quieres mostrar
+  selected_years <- c(2010, 2014, 2019, 2023)
+
+  # Preparar los datos
+  data <- merged_data %>%
+    dplyr::select(all_of(c("ISO3 Alpha-code", "Year", "education_completion_rate"))) %>%
+    drop_na(education_completion_rate) %>%
+    filter(Year %in% selected_years)
+
+  # Crear categorías de rangos
+  breaks <- c(30, 50, 70, 85, 100)  # Puedes ajustar estos cortes
+  labels <- c("30–50", "50–70", "70–85", "85–100")
+
+  # Crear columna con los rangos
+  data <- data %>%
+    mutate(education_range = cut(education_completion_rate, breaks = breaks, labels = labels, include.lowest = TRUE))
+
+  # Unir con el mapa
+  map_data <- south_america %>%
+    left_join(data, by = c("iso_a3" = "ISO3 Alpha-code")) %>%
+    drop_na(Year)
+
+  # Crear el gráfico
+  p <- ggplot(data = map_data) +
+    geom_sf(aes(fill = education_range), color = "black") +
+    scale_fill_brewer(palette = "Purples", name = "Education\nCompletion Rate (%)", na.value = "gray90") +
+    labs(
+      title = "Education Completion Rates in South America",
+      
+    ) +
+    facet_wrap(~Year, ncol = 4) +  # 👉 En fila (4 columnas)
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title = element_blank(),
+      strip.text = element_text(face = "bold", size = 12),
+      legend.position = "right",
+      legend.direction = "vertical",
+      legend.text = element_text(size = 10),
+      legend.title = element_text(face = "bold", size = 11),
+      legend.key.height = unit(0.5, "cm"),
+      panel.grid = element_blank(),
+      panel.spacing = unit(1.5, "lines")  # Más espacio entre mapas
+    )
+
+  # Mostrar en consola
+  print(p)
+
+  # Exportar el gráfico (más ancho para que los mapas no se aplasten)
+  ggsave("education_map_selected_years_horizontal.png", plot = p, width = 20, height = 7, dpi = 300)
+}
+
+# Ejecutar la función
+draw_selected_education_maps_horizontal()
+
+
+```
+
+```{r}
 hdi_countries <- read_excel("Data/HDI_countries.xlsx")
 
 hdi_countries <- hdi_countries %>%
@@ -794,10 +937,6 @@ m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$education_co
 summary(m_peru)
 ```
 
-
-
-
-
 ```{r}
 gdp_countries <- read_excel("Data/gdp_per_capita_ppp.xlsx")
 
@@ -812,10 +951,6 @@ merged_data <- merged_data %>%
   inner_join(gdp_countries,
             by = c("ISO3 Alpha-code" = "Code", "Year" = "Year"))
 ```
-
-
-
-
 
 ```{r}
 library(dplyr)
@@ -966,9 +1101,6 @@ library(ggfortify)
 autoplot(m_all)
 ```
 
-
-
-
 ```{r}
 
 # Primero, asegúrate de que los nombres de columnas coincidan
@@ -1004,6 +1136,7 @@ modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le1
 summary(modelo_poisson)
 
 ```
+
 ```{r}
 # Calcular ratio de sobredispersión
 dispersion <- sum(residuals(modelo_poisson, type = "pearson")^2) / modelo_poisson$df.residual
@@ -1044,6 +1177,7 @@ summary(poisson_model)
 dispersion <- sum(residuals(poisson_model, type = "pearson")^2) / poisson_model$df.residual
 dispersion
 ```
+
 ```{r}
 # Instalar si no está instalado
 # install.packages("MASS")
@@ -1087,11 +1221,13 @@ hist(residuals(Modelo_BN, type = "pearson"), breaks = 20,
      main = "Histograma de residuos", xlab = "Residuos de Pearson")
 
 ```
+
 ```{r}
 qqnorm(residuals(Modelo_BN, type = "pearson"))
 qqline(residuals(Modelo_BN, type = "pearson"), col = "red")
 
 ```
+
 ```{r}
 library(pscl)
 pR2(Modelo_BN)
@@ -1105,7 +1241,6 @@ plot(merged_data$Births_le18, fitted(Modelo_BN),
 abline(0, 1, col = "blue")
 
 ```
-
 
 ```{r}
 # Agregar las predicciones al dataframe original
@@ -1148,17 +1283,17 @@ df <- df.residual(poisson_model)
 dispersion_ratio <- res_dev / df
 dispersion_ratio
 ```
+
 ```{r}
 library(lmtest)
 lrtest(poisson_model, Modelo_BN)
 
 ```
+
 ```{r}
 AIC(poisson_model, Modelo_BN)
 
 ```
-
-
 
 ```{r}
 library(MASS)
@@ -1172,6 +1307,7 @@ Modelo_BN_bivariado <- glm.nb(
 ```{r}
 summary(Modelo_BN_bivariado)
 ```
+
 ```{r}
 exp(coef(Modelo_BN_bivariado))
 ```
@@ -1191,4 +1327,3 @@ AIC(Modelo_BN_bivariado, Modelo_BN)
 library(lmtest)
 lrtest(Modelo_BN_bivariado, Modelo_BN)
 ```
-
