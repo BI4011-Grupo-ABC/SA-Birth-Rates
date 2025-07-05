@@ -1069,6 +1069,83 @@ exp(cbind(coef(Modelo_BN), confint(Modelo_BN)))
 
 ```
 
+
+```{r}
+# Asegúrate de tener las librerías instaladas
+install.packages("ggplot2")
+install.packages("dplyr") # Para manipulación de datos, aunque no estrictamente necesario aquí, es útil.
+
+# Cargar las librerías
+library(ggplot2)
+library(dplyr)
+library(MASS) # Para glm.nb
+
+# Suponiendo que 'merged_data' ya está cargado y el modelo 'Modelo_BN' ya fue ajustado.
+# Si no lo tienes, puedes correr el código de tu modelo Binomial Negativa:
+# Modelo_BN <- glm.nb(
+#   Births_le18 ~ education_completion_rate.x + hdi + gdp_per_capita + Year + offset(log(TotalWomen_le18)),
+#   data = merged_data
+# )
+
+# 1. Extraer los coeficientes y los intervalos de confianza del modelo
+# Exponenciar los coeficientes y los intervalos de confianza para obtener las IRR
+irr_data <- as.data.frame(exp(cbind(IRR = coef(Modelo_BN), confint(Modelo_BN))))
+
+# Renombrar las columnas para mayor claridad
+colnames(irr_data) <- c("IRR", "Lower_CI", "Upper_CI")
+
+# 2. Preparar los datos para ggplot2
+# Convertir los nombres de las filas (variables) en una columna
+irr_data$Variable <- rownames(irr_data)
+
+# Reordenar las variables para una mejor visualización (opcional)
+irr_data$Variable <- factor(irr_data$Variable,
+                             levels = c("Year", "gdp_per_capita", "hdi", "education_completion_rate.x", "(Intercept)"))
+
+# Excluir el intercepto para la visualización, ya que su IRR suele ser difícil de interpretar
+# y a menudo de una escala muy diferente
+irr_data_plot <- irr_data %>%
+  filter(Variable != "(Intercept)")
+
+# 3. Crear el gráfico de barras con los intervalos de confianza
+
+ggplot(irr_data_plot, aes(x = Variable, y = IRR)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.7) + # Barras para la IRR
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2, color = "black") + # Barras de error para los IC
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 0.8) + # Línea de referencia en 1 (no efecto)
+  labs(
+    title = "Razones de Tasas de Incidencia (IRR) con Intervalos de Confianza (95%)",
+    x = "Variable Predictora",
+    y = "Razón de Tasa de Incidencia (IRR)"
+  ) +
+  scale_y_continuous(trans = 'log2', breaks = c(0.1, 0.5, 1, 2, 5, 10, 50, 100, 200)) + # Escala logarítmica para manejar rangos amplios
+  coord_flip() + # Voltear las coordenadas para que las barras sean horizontales
+  theme_minimal() + # Tema minimalista para una apariencia limpia
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+```
+
+```{r}
+library(ggplot2)
+ggplot(merged_data, aes(x = hdi, y = Births_le18 / TotalWomen_le18)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "glm.nb", formula = y ~ x, se = FALSE, color = "blue") + # O method = "lm" si quieres una línea recta
+  labs(title = "Tasa de Fertilidad Adolescente vs. HDI",
+       x = "HDI",
+       y = "Tasa de Nacimientos (<18)") +
+  theme_minimal()
+```
+
+```{r}
+library(car)
+vif(Modelo_BN)
+```
+
+
+
 ```{r}
 AIC(poisson_model, Modelo_BN)
 
