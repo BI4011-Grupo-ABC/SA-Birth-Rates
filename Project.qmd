@@ -1,6 +1,9 @@
 ---
 title: "Fertility rates in South America"
-format: html
+format:
+  html: default
+  pdf:
+    documentclass: article
 editor: visual
 ---
 
