@@ -761,11 +761,11 @@ fertility_data_long <- fertility_data %>%
 # Obtener el mapa de Sudamérica
 south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
 
-# Función para graficar mapas de fertilidad con leyenda por rangos
+# Función para graficar mapas de fertilidad con rangos enteros personalizados
 draw_heat_map_fertility <- function() {
   message("Generando mapa de Fertilidad...")
 
-  # Hacer la unión usando nombre de país
+  # Unir mapa con datos
   map_data <- south_america %>%
     left_join(fertility_data_long, by = c("name_long" = "Country")) %>%
     drop_na(Year)
@@ -773,15 +773,24 @@ draw_heat_map_fertility <- function() {
   # Filtrar solo los años deseados
   map_data <- map_data %>% filter(Year %in% c(2010, 2014, 2019, 2023))
 
-  # Crear categorías/rangos personalizados
-  breaks <- seq(floor(min(map_data$FertilityRate_le18, na.rm = TRUE)),
-                ceiling(max(map_data$FertilityRate_le18, na.rm = TRUE)),
-                length.out = 6)  # Puedes ajustar el número de rangos
+  # Crear rangos de números enteros
+  min_value <- floor(min(map_data$FertilityRate_le18, na.rm = TRUE))
+  max_value <- ceiling(max(map_data$FertilityRate_le18, na.rm = TRUE))
+  
+  # Crear 5 rangos con pasos enteros calculados
+  breaks <- seq(min_value, max_value, length.out = 6)  # 5 intervalos = 6 cortes
+  breaks <- round(breaks)  # Asegurar que los cortes sean enteros
+  breaks <- unique(breaks)  # Eliminar posibles duplicados por redondeo
 
+  # Crear etiquetas personalizadas de los rangos (por ejemplo: "40 - 49")
+  labels <- paste0(breaks[-length(breaks)], " - ", breaks[-1] - 1)
+  labels[length(labels)] <- paste0(breaks[length(breaks)-1], " - ", breaks[length(breaks)])  # Último rango cerrado
+
+  # Agrupar por rangos personalizados
   map_data <- map_data %>%
-    mutate(FertilityRateRange = cut(FertilityRate_le18, breaks = breaks, include.lowest = TRUE))
+    mutate(FertilityRateRange = cut(FertilityRate_le18, breaks = breaks, include.lowest = TRUE, labels = labels))
 
-  # Crear el mapa con leyenda categórica
+  # Crear el mapa
   ggplot(data = map_data) +
     geom_sf(aes(fill = FertilityRateRange), color = "black") +
     scale_fill_brewer(palette = "Oranges", na.value = "gray90", name = "Fertility Rate\n(<18 years)") +
@@ -810,7 +819,6 @@ draw_heat_map_fertility <- function() {
 
 # Ejecutar la función
 draw_heat_map_fertility()
-
 
 ```
 
