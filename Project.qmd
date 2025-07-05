@@ -803,8 +803,8 @@ gdp_countries <- read_excel("Data/gdp_per_capita_ppp.xlsx")
 
 gdp_countries <- gdp_countries %>%
   filter(`Code` %in% latam_iso3) %>%
-  rename(gdp = `GDP per capita, PPP (constant 2021 international $)`) %>%
-  select(Code, Year, gdp) %>%
+  rename(gdp_per_capita = `GDP per capita, PPP (constant 2021 international $)`) %>%
+  select(Code, Year, gdp_per_capita) %>%
   mutate(Year = as.double(Year))
 
 # XXX: No data for Venezuela's GDP
@@ -986,7 +986,7 @@ merged_data <- merged_data %>%
 ```{r}
 # Eliminar filas con valores NA en variables relevantes
 data_poisson <- merged_data %>%
-  select(Country, Year, Births_le18, education_completion_rate.x, TotalWomen_le18, hdi, gdp) %>%
+  select(Country, Year, Births_le18, education_completion_rate.x, TotalWomen_le18, hdi, gdp_per_capita) %>%
   na.omit()
 
 ```
@@ -996,7 +996,7 @@ data_poisson <- merged_data %>%
 library(stats)
 
 # Modelo de Poisson
-modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp_per_capita,
                       data = data_poisson,
                       family = poisson(link = "log"))
 
@@ -1012,7 +1012,7 @@ dispersion
 ```
 
 ```{r}
-modelo_quasi <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+modelo_quasi <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp_per_capita,
                     data = data_poisson,
                     family = quasipoisson(link = "log"))
 
@@ -1022,7 +1022,7 @@ summary(modelo_quasi)
 ```{r}
 library(MASS)
 
-modelo_nb <- glm.nb(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+modelo_nb <- glm.nb(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp_per_capita,
                     data = data_poisson)
 
 summary(modelo_nb)
@@ -1031,7 +1031,7 @@ summary(modelo_nb)
 
 ```{r}
 poisson_model <- glm(
-  Births_le18 ~  education_completion_rate.x + hdi + gdp + Year,
+  Births_le18 ~  education_completion_rate.x + hdi + gdp_per_capita + Year,
   data = merged_data,
   family = poisson(link = "log"),
   offset = log(TotalWomen_le18)
@@ -1054,7 +1054,7 @@ library(pscl)
 
 # Modelo Binomial Negativa para predecir Births_le18
 Modelo_BN <- glm.nb(
-  Births_le18 ~ education_completion_rate.x + hdi + gdp + Year + offset(log(TotalWomen_le18)),
+  Births_le18 ~ education_completion_rate.x + hdi + gdp_per_capita + Year + offset(log(TotalWomen_le18)),
   data = merged_data
 )
 
