@@ -1,6 +1,9 @@
 ---
 title: "Fertility rates in South America"
-format: html
+format:
+  html: default
+  pdf:
+    documentclass: article
 editor: visual
 ---
 
@@ -521,61 +524,32 @@ head(data_combined_2010_2014)
 
 ```
 
-
 ```{r}
 # Cargar librerías necesarias
+if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
+if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
+if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
+
+library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(ggplot2)
 
-# Leer el archivo original
-data_original <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
-
-# Renombrar la primera columna como "Country"
-colnames(data_original)[1] <- "Country"
-
-# Seleccionar columnas de 2010 a 2014
-data_years <- data_original[, c("Country", "2010", "2011", "2012", "2013", "2014")]
-
-# Escalar solo las columnas numéricas
-data_scaled_1 <- scale(data_years[, -1])
-
-# Clustering jerárquico
-hclust_result <- hclust(dist(data_scaled_1))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-
-# Combinar Country, datos originales y clusters
-data_combined_2010_2014 <- data_years %>%
-  mutate(Cluster = as.factor(clusters_hierarchical))
-
-# Intercambiar etiquetas de cluster 1 y 2
-data_combined_2010_2014 <- data_combined_2010_2014 %>%
-  mutate(
-    Cluster = case_when(
-      Cluster == "1" ~ "2",
-      Cluster == "2" ~ "1",
-      TRUE ~ as.character(Cluster)
-    ),
-    Cluster = as.factor(Cluster)
-  )
-
-# Convertir a formato largo
 data_long <- data_combined_2010_2014 %>%
   pivot_longer(
-    cols = starts_with("20"),
-    names_to = "Year",
-    values_to = "Emissions"
+    cols = starts_with("20"),    # columnas de años
+    names_to = "Year",           # nueva columna con el año
+    values_to = "Emissions"      # nueva columna con el valor
   ) %>%
   mutate(
-    Year = as.numeric(Year),
-    Country_abbr = substr(Country, 1, 3)
+    Year = as.numeric(Year),                # convertir "2010", "2011", ... a número
+    Country_abbr = substr(Country, 1, 3)    # abreviar país a 3 letras
   )
 
-# Crear el gráfico con facetas en vertical sin etiquetas
+# Crear el gráfico con facetas por Cluster
 ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +  # Vertical, escalas libres
+  facet_wrap(~Cluster, nrow = 1) +
   scale_x_continuous(breaks = 2010:2014) +
   theme_minimal() +
   labs(
@@ -588,14 +562,10 @@ ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Cou
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
     plot.subtitle = element_text(hjust = 0.5, size = 12),
-    axis.text.x = element_text(size = 8),
+    axis.text.x = element_text(size = 8),               # Tamaño reducido en eje X
     legend.position = "right",
-    panel.spacing = unit(1, "lines"),
-    strip.text = element_blank(),  # Quitar las etiquetas de los clusters
-    aspect.ratio = 0.3              # Hace los paneles más delgados (ajustable)
+    panel.spacing = unit(1, "lines")                    # Espaciado entre paneles
   )
-
-
 ```
 
 ```{r}
@@ -636,60 +606,33 @@ data_combined_2015_2019 <- data_combined_2015_2019 %>%
 # Mostrar los primeros resultados
 head(data_combined_2015_2019)
 ```
+
 ```{r}
 # Cargar librerías necesarias
+if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
+if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
+if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
+
+library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(ggplot2)
 
-# Leer el archivo original
-data_original <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
-
-# Renombrar la primera columna como "Country"
-colnames(data_original)[1] <- "Country"
-
-# Seleccionar columnas de 2015 a 2019
-data_years <- data_original[, c("Country", "2015", "2016", "2017", "2018", "2019")]
-
-# Escalar solo las columnas numéricas
-data_scaled_2 <- scale(data_years[, -1])
-
-# Clustering jerárquico
-hclust_result <- hclust(dist(data_scaled_2))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-
-# Combinar Country, datos originales y clusters
-data_combined_2015_2019 <- data_years %>%
-  mutate(Cluster = as.factor(clusters_hierarchical))
-
-# Intercambiar etiquetas de cluster 1 y 2
-data_combined_2015_2019 <- data_combined_2015_2019 %>%
-  mutate(
-    Cluster = case_when(
-      Cluster == "1" ~ "2",
-      Cluster == "2" ~ "1",
-      TRUE ~ as.character(Cluster)
-    ),
-    Cluster = as.factor(Cluster)
-  )
-
-# Convertir a formato largo
 data_long_2 <- data_combined_2015_2019 %>%
   pivot_longer(
-    cols = starts_with("20"),
-    names_to = "Year",
-    values_to = "Tasa_de_fertilidad"
+    cols = starts_with("20"),    
+    names_to = "Year",           
+    values_to = "Tasa de fertilidad"      
   ) %>%
   mutate(
     Year = as.numeric(Year),
-    Country_abbr = substr(Country, 1, 3)
+    Country = substr(Country, 1, 3)  # Abreviar país a 3 letras
   )
 
-# Crear gráfico final sin etiquetas de cluster y con gráficos delgados
-ggplot(data_long_2, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, group = Country)) +
+# Crear gráfico
+ggplot(data_long_2, aes(x = Year, y = `Tasa de fertilidad`, color = Country, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
+  facet_wrap(~Cluster, nrow = 1) +
   scale_x_continuous(breaks = 2015:2019) +
   theme_minimal() +
   labs(
@@ -702,13 +645,11 @@ ggplot(data_long_2, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, 
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
     plot.subtitle = element_text(hjust = 0.5, size = 12),
-    axis.text.x = element_text(size = 8),
-    legend.text = element_text(size = 8),
+    axis.text.x = element_text(size = 8),              # Reducir tamaño del eje X
+    legend.text = element_text(size = 8),              # Tamaño de leyenda
     legend.title = element_text(face = "bold", size = 9),
     legend.position = "right",
-    panel.spacing = unit(1, "lines"),
-    strip.text = element_blank(),  # Quitar los números de los clusters
-    aspect.ratio = 0.3              # Hacer los gráficos más delgados
+    panel.spacing = unit(1, "lines")                 # Aumentar espacio entre clusters
   )
 
 ```
@@ -754,58 +695,31 @@ head(data_combined_2020_2023)
 
 ```{r}
 # Cargar librerías necesarias
+if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
+if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
+if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
+
+library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(ggplot2)
 
-# Leer el archivo original
-data_original <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
-
-# Renombrar la primera columna como "Country"
-colnames(data_original)[1] <- "Country"
-
-# Seleccionar columnas de 2020 a 2023
-data_years <- data_original[, c("Country", "2020", "2021", "2022", "2023")]
-
-# Escalar solo las columnas numéricas
-data_scaled_3 <- scale(data_years[, -1])
-
-# Clustering jerárquico
-hclust_result <- hclust(dist(data_scaled_3))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-
-# Combinar Country, datos originales y clusters
-data_combined_2020_2023 <- data_years %>%
-  mutate(Cluster = as.factor(clusters_hierarchical))
-
-# Intercambiar etiquetas de cluster 1 y 2
-data_combined_2020_2023 <- data_combined_2020_2023 %>%
-  mutate(
-    Cluster = case_when(
-      Cluster == "1" ~ "2",
-      Cluster == "2" ~ "1",
-      TRUE ~ as.character(Cluster)
-    ),
-    Cluster = as.factor(Cluster)
-  )
-
-# Convertir los datos a formato largo
+# Convertir los datos a formato largo y abreviar los nombres de país
 data_long_3 <- data_combined_2020_2023 %>%
   pivot_longer(
     cols = starts_with("20"),
     names_to = "Year",
-    values_to = "Tasa_de_fertilidad"
+    values_to = "Tasa de fertilidad"
   ) %>%
   mutate(
     Year = as.numeric(Year),
-    Country_abbr = substr(Country, 1, 3)
+    Country = substr(Country, 1, 3)  # Abreviar país a 3 letras
   )
 
-# Crear el gráfico final sin etiquetas de cluster y con gráficos delgados
-ggplot(data_long_3, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, group = Country)) +
+# Crear el gráfico con facetas por Cluster
+ggplot(data_long_3, aes(x = Year, y = `Tasa de fertilidad`, color = Country, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
+  facet_wrap(~Cluster, nrow = 1) +
   scale_x_continuous(breaks = 2020:2023) +
   theme_minimal() +
   labs(
@@ -818,219 +732,12 @@ ggplot(data_long_3, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, 
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
     plot.subtitle = element_text(hjust = 0.5, size = 12),
-    axis.text.x = element_text(size = 8),
+    axis.text.x = element_text(size = 8),              # Reducir tamaño del eje X
     legend.text = element_text(size = 8),
     legend.title = element_text(face = "bold", size = 9),
     legend.position = "right",
-    panel.spacing = unit(1, "lines"),
-    strip.text = element_blank(),    # Quitar los números de los clusters
-    aspect.ratio = 0.3               # Hacer los gráficos más delgados
+    panel.spacing = unit(1, "lines")                 # Aumentar espacio entre clusters
   )
-
-```
-
-```{r}
-# Librerías necesarias
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(patchwork)  # Para combinar gráficos
-
-### 1. Cluster: 2010–2014
-data_years1 <- data_original[, c("Country", "2010", "2011", "2012", "2013", "2014")]
-data_scaled_1 <- scale(data_years1[, -1])
-hclust_result <- hclust(dist(data_scaled_1))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-data_combined_2010_2014 <- data_years1 %>%
-  mutate(Cluster = as.factor(clusters_hierarchical)) %>%
-  mutate(
-    Cluster = case_when(
-      Cluster == "1" ~ "2",
-      Cluster == "2" ~ "1",
-      TRUE ~ as.character(Cluster)
-    ),
-    Cluster = as.factor(Cluster)
-  )
-
-data_long_1 <- data_combined_2010_2014 %>%
-  pivot_longer(cols = starts_with("20"), names_to = "Year", values_to = "Tasa") %>%
-  mutate(Year = as.numeric(Year), Country_abbr = substr(Country, 1, 3))
-
-g1 <- ggplot(data_long_1, aes(x = Year, y = Tasa, color = Country_abbr, group = Country)) +
-  geom_line(size = 0.8) +
-  geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
-  scale_x_continuous(breaks = 2010:2014) +
-  theme_minimal() +
-  labs(title = "Fertilidad (2010–2014)", x = "Año", y = "Tasa estandarizada", color = "País") +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    strip.text = element_blank(),
-    legend.position = "none",
-    aspect.ratio = 0.3
-  )
-
-### 2. Cluster: 2015–2019
-data_years2 <- data_original[, c("Country", "2015", "2016", "2017", "2018", "2019")]
-data_scaled_2 <- scale(data_years2[, -1])
-hclust_result <- hclust(dist(data_scaled_2))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-data_combined_2015_2019 <- data_years2 %>%
-  mutate(Cluster = as.factor(clusters_hierarchical)) %>%
-  mutate(
-    Cluster = case_when(
-      Cluster == "1" ~ "2",
-      Cluster == "2" ~ "1",
-      TRUE ~ as.character(Cluster)
-    ),
-    Cluster = as.factor(Cluster)
-  )
-
-data_long_2 <- data_combined_2015_2019 %>%
-  pivot_longer(cols = starts_with("20"), names_to = "Year", values_to = "Tasa") %>%
-  mutate(Year = as.numeric(Year), Country_abbr = substr(Country, 1, 3))
-
-g2 <- ggplot(data_long_2, aes(x = Year, y = Tasa, color = Country_abbr, group = Country)) +
-  geom_line(size = 0.8) +
-  geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
-  scale_x_continuous(breaks = 2015:2019) +
-  theme_minimal() +
-  labs(title = "Fertilidad (2015–2019)", x = "Año", y = "Tasa estandarizada", color = "País") +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    strip.text = element_blank(),
-    legend.position = "none",
-    aspect.ratio = 0.3
-  )
-
-### 3. Cluster: 2020–2023
-data_years3 <- data_original[, c("Country", "2020", "2021", "2022", "2023")]
-data_scaled_3 <- scale(data_years3[, -1])
-hclust_result <- hclust(dist(data_scaled_3))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-data_combined_2020_2023 <- data_years3 %>%
-  mutate(Cluster = as.factor(clusters_hierarchical)) %>%
-  mutate(
-    Cluster = case_when(
-      Cluster == "1" ~ "2",
-      Cluster == "2" ~ "1",
-      TRUE ~ as.character(Cluster)
-    ),
-    Cluster = as.factor(Cluster)
-  )
-
-data_long_3 <- data_combined_2020_2023 %>%
-  pivot_longer(cols = starts_with("20"), names_to = "Year", values_to = "Tasa") %>%
-  mutate(Year = as.numeric(Year), Country_abbr = substr(Country, 1, 3))
-
-g3 <- ggplot(data_long_3, aes(x = Year, y = Tasa, color = Country_abbr, group = Country)) +
-  geom_line(size = 0.8) +
-  geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
-  scale_x_continuous(breaks = 2020:2023) +
-  theme_minimal() +
-  labs(title = "Fertilidad (2020–2023)", x = "Año", y = "Tasa estandarizada", color = "País") +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    strip.text = element_blank(),
-    legend.position = "right",
-    aspect.ratio = 0.3
-  )
-
-### Unir los tres gráficos
-g1 + g2 + g3 + plot_layout(ncol = 3)
-
-```
-
-
-```{r}
-# Cargar librerías necesarias
-library(tidyverse)
-library(ggplot2)
-library(sf)
-library(rnaturalearth)
-library(RColorBrewer)
-library(glue)
-
-# Leer el archivo de fertilidad
-fertility_data <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
-
-# Transformar a formato largo
-fertility_data_long <- fertility_data %>%
-  pivot_longer(
-    cols = -Country,
-    names_to = "Year",
-    values_to = "FertilityRate_le18"
-  ) %>%
-  mutate(Year = as.numeric(Year))
-
-# Obtener el mapa de Sudamérica
-south_america <- ne_countries(scale = "medium", continent = "South America", returnclass = "sf")
-
-# Función para graficar mapas de fertilidad con rangos enteros personalizados
-draw_heat_map_fertility <- function() {
-  message("Generando mapa de Fertilidad...")
-
-  # Unir mapa con datos
-  map_data <- south_america %>%
-    left_join(fertility_data_long, by = c("name_long" = "Country")) %>%
-    drop_na(Year)
-
-  # Filtrar solo los años deseados
-  map_data <- map_data %>% filter(Year %in% c(2010, 2014, 2019, 2023))
-
-  # Crear rangos de números enteros
-  min_value <- floor(min(map_data$FertilityRate_le18, na.rm = TRUE))
-  max_value <- ceiling(max(map_data$FertilityRate_le18, na.rm = TRUE))
-  
-  # Crear 5 rangos con pasos enteros calculados
-  breaks <- seq(min_value, max_value, length.out = 6)  # 5 intervalos = 6 cortes
-  breaks <- round(breaks)  # Asegurar que los cortes sean enteros
-  breaks <- unique(breaks)  # Eliminar posibles duplicados por redondeo
-
-  # Crear etiquetas personalizadas de los rangos (por ejemplo: "40 - 49")
-  labels <- paste0(breaks[-length(breaks)], " - ", breaks[-1] - 1)
-  labels[length(labels)] <- paste0(breaks[length(breaks)-1], " - ", breaks[length(breaks)])  # Último rango cerrado
-
-  # Agrupar por rangos personalizados
-  map_data <- map_data %>%
-    mutate(FertilityRateRange = cut(FertilityRate_le18, breaks = breaks, include.lowest = TRUE, labels = labels))
-
-  # Crear el mapa
-  ggplot(data = map_data) +
-    geom_sf(aes(fill = FertilityRateRange), color = "black") +
-    scale_fill_brewer(palette = "Oranges", na.value = "gray90", name = "Fertility Rate\n(<18 years)") +
-    labs(
-      title = "Fertility Rates (<18 years) in South America",
-      subtitle = ""
-    ) +
-    facet_wrap(~Year, ncol = 4) +  # 4 mapas en una fila
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
-      plot.subtitle = element_text(hjust = 0.5, size = 12),
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      axis.title = element_blank(),
-      strip.text = element_text(face = "bold", size = 10),
-      legend.position = "right",
-      legend.direction = "vertical",
-      legend.text = element_text(size = 8),
-      legend.title = element_text(face = "bold", size = 9),
-      legend.key.height = unit(0.5, "cm"),
-      panel.grid = element_blank(),
-      panel.spacing = unit(0.5, "lines")
-    )
-}
-
-# Ejecutar la función
-```
-
-
-```{r}
-draw_heat_map_fertility()
-
 ```
 
 # Education clustering
@@ -1064,84 +771,16 @@ merged_data <- merged_data %>%
 ```
 
 ```{r}
-# Función para graficar solo los años seleccionados con leyenda por rangos en fila
-draw_selected_education_maps_horizontal <- function() {
-  message("Generando mapa de educación en fila horizontal con leyenda por rangos...")
+life_expectancy <- read_csv("Data/life-expectancy.csv")
 
-  # Años específicos que quieres mostrar
-  selected_years <- c(2010, 2014, 2019, 2023)
-
-  # Preparar los datos
-  data <- merged_data %>%
-    dplyr::select(all_of(c("ISO3 Alpha-code", "Year", "education_completion_rate"))) %>%
-    drop_na(education_completion_rate) %>%
-    filter(Year %in% selected_years)
-
-  # Crear categorías de rangos
-  breaks <- c(30, 50, 70, 85, 100)  # Puedes ajustar estos cortes
-  labels <- c("30–50", "50–70", "70–85", "85–100")
-
-  # Crear columna con los rangos
-  data <- data %>%
-    mutate(education_range = cut(education_completion_rate, breaks = breaks, labels = labels, include.lowest = TRUE))
-
-  # Unir con el mapa
-  map_data <- south_america %>%
-    left_join(data, by = c("iso_a3" = "ISO3 Alpha-code")) %>%
-    drop_na(Year)
-
-  # Crear el gráfico
-  p <- ggplot(data = map_data) +
-    geom_sf(aes(fill = education_range), color = "black") +
-    scale_fill_brewer(palette = "Purples", name = "Education\nCompletion Rate (%)", na.value = "gray90") +
-    labs(
-      title = "Education Completion Rates in South America",
-      
-    ) +
-    facet_wrap(~Year, ncol = 4) +  # 👉 En fila (4 columnas)
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
-      plot.subtitle = element_text(hjust = 0.5, size = 12),
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      axis.title = element_blank(),
-      strip.text = element_text(face = "bold", size = 12),
-      legend.position = "right",
-      legend.direction = "vertical",
-      legend.text = element_text(size = 10),
-      legend.title = element_text(face = "bold", size = 11),
-      legend.key.height = unit(0.5, "cm"),
-      panel.grid = element_blank(),
-      panel.spacing = unit(1.5, "lines")  # Más espacio entre mapas
-    )
-
-  # Mostrar en consola
-  print(p)
-
-  # Exportar el gráfico (más ancho para que los mapas no se aplasten)
-  ggsave("education_map_selected_years_horizontal.png", plot = p, width = 20, height = 7, dpi = 300)
-}
-
-# Ejecutar la función
-draw_selected_education_maps_horizontal()
-
-
-```
-
-```{r}
-hdi_countries <- read_excel("Data/HDI_countries.xlsx")
-
-hdi_countries <- hdi_countries %>%
-  filter(`countryIsoCode` %in% latam_iso3) %>%
-  dplyr::select(countryIsoCode, year, value) %>%
-  mutate(year = as.double(year)) %>%
-  rename(hdi = value) %>%
-  mutate(hdi = as.numeric(hdi))
+life_expectancy <- life_expectancy %>%
+  filter(Code %in% latam_iso3) %>%
+  rename(life_expectancy = `Period life expectancy at birth - Sex: total - Age: 0`) %>%
+  dplyr::select(Code, Year, life_expectancy)
 
 merged_data <- merged_data %>%
-  left_join(hdi_countries,
-            by = c("ISO3 Alpha-code" = "countryIsoCode", "Year" = "year"))
+  left_join(life_expectancy,
+            by = c("ISO3 Alpha-code" = "Code", "Year" = "Year"))
 ```
 
 ```{r}
@@ -1156,13 +795,17 @@ m_peru <- lm(merged_data_peru$FertilityRate_le18 ~ merged_data_peru$education_co
 summary(m_peru)
 ```
 
+
+
+
+
 ```{r}
 gdp_countries <- read_excel("Data/gdp_per_capita_ppp.xlsx")
 
 gdp_countries <- gdp_countries %>%
   filter(`Code` %in% latam_iso3) %>%
-  rename(gdp = `GDP per capita, PPP (constant 2021 international $)`) %>%
-  select(Code, Year, gdp) %>%
+  rename(gdp_per_capita = `GDP per capita, PPP (constant 2021 international $)`) %>%
+  select(Code, Year, gdp_per_capita) %>%
   mutate(Year = as.double(Year))
 
 # XXX: No data for Venezuela's GDP
@@ -1170,6 +813,10 @@ merged_data <- merged_data %>%
   inner_join(gdp_countries,
             by = c("ISO3 Alpha-code" = "Code", "Year" = "Year"))
 ```
+
+
+
+
 
 ```{r}
 library(dplyr)
@@ -1320,6 +967,9 @@ library(ggfortify)
 autoplot(m_all)
 ```
 
+
+
+
 ```{r}
 
 # Primero, asegúrate de que los nombres de columnas coincidan
@@ -1337,7 +987,7 @@ merged_data <- merged_data %>%
 ```{r}
 # Eliminar filas con valores NA en variables relevantes
 data_poisson <- merged_data %>%
-  select(Country, Year, Births_le18, education_completion_rate.x, TotalWomen_le18, hdi, gdp) %>%
+  select(Country, Year, Births_le18, education_completion_rate.x, TotalWomen_le18, life_expectancy, gdp_per_capita) %>%
   na.omit()
 
 ```
@@ -1347,7 +997,7 @@ data_poisson <- merged_data %>%
 library(stats)
 
 # Modelo de Poisson
-modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + life_expectancy + gdp_per_capita,
                       data = data_poisson,
                       family = poisson(link = "log"))
 
@@ -1355,7 +1005,6 @@ modelo_poisson <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le1
 summary(modelo_poisson)
 
 ```
-
 ```{r}
 # Calcular ratio de sobredispersión
 dispersion <- sum(residuals(modelo_poisson, type = "pearson")^2) / modelo_poisson$df.residual
@@ -1364,7 +1013,7 @@ dispersion
 ```
 
 ```{r}
-modelo_quasi <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+modelo_quasi <- glm(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + life_expectancy + gdp_per_capita,
                     data = data_poisson,
                     family = quasipoisson(link = "log"))
 
@@ -1374,7 +1023,7 @@ summary(modelo_quasi)
 ```{r}
 library(MASS)
 
-modelo_nb <- glm.nb(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + hdi + gdp,
+modelo_nb <- glm.nb(Births_le18 ~ education_completion_rate.x + TotalWomen_le18 + life_expectancy + gdp_per_capita,
                     data = data_poisson)
 
 summary(modelo_nb)
@@ -1383,7 +1032,7 @@ summary(modelo_nb)
 
 ```{r}
 poisson_model <- glm(
-  Births_le18 ~  education_completion_rate.x + hdi + gdp + Year,
+  Births_le18 ~  education_completion_rate.x + life_expectancy + gdp_per_capita + Year,
   data = merged_data,
   family = poisson(link = "log"),
   offset = log(TotalWomen_le18)
@@ -1396,7 +1045,6 @@ summary(poisson_model)
 dispersion <- sum(residuals(poisson_model, type = "pearson")^2) / poisson_model$df.residual
 dispersion
 ```
-
 ```{r}
 # Instalar si no está instalado
 # install.packages("MASS")
@@ -1407,7 +1055,7 @@ library(pscl)
 
 # Modelo Binomial Negativa para predecir Births_le18
 Modelo_BN <- glm.nb(
-  Births_le18 ~ education_completion_rate.x + hdi + gdp + Year + offset(log(TotalWomen_le18)),
+  Births_le18 ~ education_completion_rate.x + life_expectancy + gdp_per_capita + Year + offset(log(TotalWomen_le18)),
   data = merged_data
 )
 
@@ -1421,6 +1069,83 @@ summary(Modelo_BN)
 exp(cbind(coef(Modelo_BN), confint(Modelo_BN)))
 
 ```
+
+
+```{r}
+# Asegúrate de tener las librerías instaladas
+install.packages("ggplot2")
+install.packages("dplyr") # Para manipulación de datos, aunque no estrictamente necesario aquí, es útil.
+
+# Cargar las librerías
+library(ggplot2)
+library(dplyr)
+library(MASS) # Para glm.nb
+
+# Suponiendo que 'merged_data' ya está cargado y el modelo 'Modelo_BN' ya fue ajustado.
+# Si no lo tienes, puedes correr el código de tu modelo Binomial Negativa:
+# Modelo_BN <- glm.nb(
+#   Births_le18 ~ education_completion_rate.x + hdi + gdp_per_capita + Year + offset(log(TotalWomen_le18)),
+#   data = merged_data
+# )
+
+# 1. Extraer los coeficientes y los intervalos de confianza del modelo
+# Exponenciar los coeficientes y los intervalos de confianza para obtener las IRR
+irr_data <- as.data.frame(exp(cbind(IRR = coef(Modelo_BN), confint(Modelo_BN))))
+
+# Renombrar las columnas para mayor claridad
+colnames(irr_data) <- c("IRR", "Lower_CI", "Upper_CI")
+
+# 2. Preparar los datos para ggplot2
+# Convertir los nombres de las filas (variables) en una columna
+irr_data$Variable <- rownames(irr_data)
+
+# Reordenar las variables para una mejor visualización (opcional)
+irr_data$Variable <- factor(irr_data$Variable,
+                             levels = c("Year", "gdp_per_capita", "life_expectancy", "education_completion_rate.x", "(Intercept)"))
+
+# Excluir el intercepto para la visualización, ya que su IRR suele ser difícil de interpretar
+# y a menudo de una escala muy diferente
+irr_data_plot <- irr_data %>%
+  filter(Variable != "(Intercept)")
+
+# 3. Crear el gráfico de barras con los intervalos de confianza
+
+ggplot(irr_data_plot, aes(x = Variable, y = IRR)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.7) + # Barras para la IRR
+  geom_errorbar(aes(ymin = Lower_CI, ymax = Upper_CI), width = 0.2, color = "black") + # Barras de error para los IC
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 0.8) + # Línea de referencia en 1 (no efecto)
+  labs(
+    title = "Razones de Tasas de Incidencia (IRR) con Intervalos de Confianza (95%)",
+    x = "Variable Predictora",
+    y = "Razón de Tasa de Incidencia (IRR)"
+  ) +
+  scale_y_continuous(trans = 'log2', breaks = c(0.1, 0.5, 1, 2, 5, 10, 50, 100, 200)) + # Escala logarítmica para manejar rangos amplios
+  coord_flip() + # Voltear las coordenadas para que las barras sean horizontales
+  theme_minimal() + # Tema minimalista para una apariencia limpia
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+```
+
+```{r}
+library(ggplot2)
+ggplot(merged_data, aes(x = life_expectancy, y = Births_le18 / TotalWomen_le18)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "glm.nb", formula = y ~ x, se = FALSE, color = "blue") + # O method = "lm" si quieres una línea recta
+  labs(title = "Tasa de Fertilidad Adolescente vs. Life Expectancy",
+       x = "Life Expectancy",
+       y = "Tasa de Nacimientos (<18)") +
+  theme_minimal()
+```
+
+```{r}
+library(car)
+vif(Modelo_BN)
+```
+
+
 
 ```{r}
 AIC(poisson_model, Modelo_BN)
@@ -1440,13 +1165,11 @@ hist(residuals(Modelo_BN, type = "pearson"), breaks = 20,
      main = "Histograma de residuos", xlab = "Residuos de Pearson")
 
 ```
-
 ```{r}
 qqnorm(residuals(Modelo_BN, type = "pearson"))
 qqline(residuals(Modelo_BN, type = "pearson"), col = "red")
 
 ```
-
 ```{r}
 library(pscl)
 pR2(Modelo_BN)
@@ -1460,6 +1183,7 @@ plot(merged_data$Births_le18, fitted(Modelo_BN),
 abline(0, 1, col = "blue")
 
 ```
+
 
 ```{r}
 # Agregar las predicciones al dataframe original
@@ -1502,17 +1226,17 @@ df <- df.residual(poisson_model)
 dispersion_ratio <- res_dev / df
 dispersion_ratio
 ```
-
 ```{r}
 library(lmtest)
 lrtest(poisson_model, Modelo_BN)
 
 ```
-
 ```{r}
 AIC(poisson_model, Modelo_BN)
 
 ```
+
+
 
 ```{r}
 library(MASS)
@@ -1526,7 +1250,6 @@ Modelo_BN_bivariado <- glm.nb(
 ```{r}
 summary(Modelo_BN_bivariado)
 ```
-
 ```{r}
 exp(coef(Modelo_BN_bivariado))
 ```
@@ -1546,3 +1269,4 @@ AIC(Modelo_BN_bivariado, Modelo_BN)
 library(lmtest)
 lrtest(Modelo_BN_bivariado, Modelo_BN)
 ```
+
