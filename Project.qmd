@@ -525,11 +525,6 @@ head(data_combined_2010_2014)
 ```
 
 ```{r}
-# Cargar librerías necesarias
-if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
-if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
-if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
-
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -546,15 +541,15 @@ data_long <- data_combined_2010_2014 %>%
   )
 
 # Crear el gráfico con facetas por Cluster
-ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Country)) +
+clusters_2010_2014 <- ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
   facet_wrap(~Cluster, nrow = 1) +
-  scale_x_continuous(breaks = 2010:2014) +
+  scale_x_continuous(breaks = seq(2010, 2014, by=2)) +
   theme_minimal() +
   labs(
-    title = "Tasa de Fertilidad por País y Cluster (2010–2014)",
-    subtitle = "Agrupado según clustering jerárquico",
+    title = "TFT por Cluster",
+    subtitle = "2010-2014",
     x = "Año",
     y = "Tasa estandarizada",
     color = "País"
@@ -566,6 +561,8 @@ ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Cou
     legend.position = "right",
     panel.spacing = unit(1, "lines")                    # Espaciado entre paneles
   )
+
+print(clusters_2010_2014)
 ```
 
 ```{r}
@@ -609,10 +606,6 @@ head(data_combined_2015_2019)
 
 ```{r}
 # Cargar librerías necesarias
-if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
-if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
-if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
-
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -629,15 +622,15 @@ data_long_2 <- data_combined_2015_2019 %>%
   )
 
 # Crear gráfico
-ggplot(data_long_2, aes(x = Year, y = `Tasa de fertilidad`, color = Country, group = Country)) +
+clusters_2015_2019 <- ggplot(data_long_2, aes(x = Year, y = `Tasa de fertilidad`, color = Country, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
   facet_wrap(~Cluster, nrow = 1) +
-  scale_x_continuous(breaks = 2015:2019) +
+  scale_x_continuous(breaks = seq(2015, 2019, by=2)) +
   theme_minimal() +
   labs(
-    title = "Tasa de Fertilidad por País y Cluster (2015–2019)",
-    subtitle = "Agrupado según clustering jerárquico",
+    # title = "TFT por Cluster",
+    subtitle = "2015-2019",
     x = "Año",
     y = "Tasa estandarizada",
     color = "País"
@@ -651,7 +644,7 @@ ggplot(data_long_2, aes(x = Year, y = `Tasa de fertilidad`, color = Country, gro
     legend.position = "right",
     panel.spacing = unit(1, "lines")                 # Aumentar espacio entre clusters
   )
-
+print(clusters_2015_2019)
 ```
 
 ```{r}
@@ -682,8 +675,9 @@ data_combined_2020_2023 <- data_years %>%
 data_combined_2020_2023 <- data_combined_2020_2023 %>%
   mutate(
     Cluster = case_when(
-      Cluster == "1" ~ "2",
+      Cluster == "1" ~ "3",
       Cluster == "2" ~ "1",
+      Cluster == "3" ~ "2",
       TRUE ~ as.character(Cluster)
     ),
     Cluster = as.factor(Cluster)
@@ -695,10 +689,6 @@ head(data_combined_2020_2023)
 
 ```{r}
 # Cargar librerías necesarias
-if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
-if (!requireNamespace("tidyr", quietly = TRUE)) install.packages("tidyr")
-if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
-
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -716,15 +706,15 @@ data_long_3 <- data_combined_2020_2023 %>%
   )
 
 # Crear el gráfico con facetas por Cluster
-ggplot(data_long_3, aes(x = Year, y = `Tasa de fertilidad`, color = Country, group = Country)) +
+clusters_2020_2023 <- ggplot(data_long_3, aes(x = Year, y = `Tasa de fertilidad`, color = Country, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
   facet_wrap(~Cluster, nrow = 1) +
-  scale_x_continuous(breaks = 2020:2023) +
+  scale_x_continuous(breaks = seq(2020, 2023, by=2)) +
   theme_minimal() +
   labs(
-    title = "Tasa de Fertilidad por País y Cluster (2020–2023)",
-    subtitle = "Agrupado según clustering jerárquico",
+    # title = "TFT por Cluster",
+    subtitle = "2020-2023",
     x = "Año",
     y = "Tasa estandarizada",
     color = "País"
@@ -738,7 +728,39 @@ ggplot(data_long_3, aes(x = Year, y = `Tasa de fertilidad`, color = Country, gro
     legend.position = "right",
     panel.spacing = unit(1, "lines")                 # Aumentar espacio entre clusters
   )
+print(clusters_2020_2023)
 ```
+
+```{r}
+width <- 6
+height <- 2.5
+dpi <- 300
+
+ggsave(
+  filename = "fertility_clusters_1.png",
+  plot = clusters_2010_2014,
+  width = width,       # in inches by default
+  height = height,      # in inches
+  dpi = dpi        # dots per inch — good quality for publications
+)
+
+ggsave(
+  filename = "fertility_clusters_2.png",
+  plot = clusters_2015_2019,
+  width = width,       # in inches by default
+  height = height,      # in inches
+  dpi = dpi        # dots per inch — good quality for publications
+)
+
+ggsave(
+  filename = "fertility_clusters_3.png",
+  plot = clusters_2020_2023,
+  width = width,       # in inches by default
+  height = height,      # in inches
+  dpi = dpi        # dots per inch — good quality for publications
+)
+```
+
 
 # Education clustering
 
@@ -984,6 +1006,39 @@ merged_data <- merged_data %>%
   left_join(education_completion_rates, by = c("ISO3 Alpha-code" = "Country", "Year" = "Year" ))
 ```
 
+# Graficar evolucion de educacion
+
+```{r}
+tendencies_education_completion_rates <- ggplot(merged_data, aes(x = Year, y = education_completion_rate.x, color = `Country`, group = Country)) +
+    geom_line(size = 0.8) +
+    geom_point() +
+    labs(
+      title = glue("Education completion rate"),
+      # subtitle = "",
+      x = "Year",
+      y = "Completion rate (%)",
+      color = "Country"
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "right",
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold")
+    )
+print(tendencies_education_completion_rates)
+```
+
+```{r}
+ggsave(
+  filename = "tendencies_education_completion_rates.png",
+  plot = tendencies_education_completion_rates,
+  width = 10,       # in inches by default
+  height = 8,      # in inches
+  dpi = 300        # dots per inch — good quality for publications
+)
+```
+
+
+
 ```{r}
 # Eliminar filas con valores NA en variables relevantes
 data_poisson <- merged_data %>%
@@ -1046,10 +1101,6 @@ dispersion <- sum(residuals(poisson_model, type = "pearson")^2) / poisson_model$
 dispersion
 ```
 ```{r}
-# Instalar si no está instalado
-# install.packages("MASS")
-# install.packages("pscl")
-
 library(MASS)
 library(pscl)
 
@@ -1072,10 +1123,6 @@ exp(cbind(coef(Modelo_BN), confint(Modelo_BN)))
 
 
 ```{r}
-# Asegúrate de tener las librerías instaladas
-install.packages("ggplot2")
-install.packages("dplyr") # Para manipulación de datos, aunque no estrictamente necesario aquí, es útil.
-
 # Cargar las librerías
 library(ggplot2)
 library(dplyr)
