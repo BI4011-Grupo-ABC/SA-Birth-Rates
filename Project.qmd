@@ -574,15 +574,15 @@ data_long <- data_combined_2010_2014 %>%
   )
 
 # Crear el gráfico con facetas en vertical sin etiquetas
-ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Country)) +
+fert_trends_c1 <- ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
   facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +  # Vertical, escalas libres
   scale_x_continuous(breaks = 2010:2014) +
   theme_minimal() +
   labs(
-    title = "Tasa de Fertilidad por País y Cluster (2010–2014)",
-    subtitle = "Agrupado según clustering jerárquico",
+    # title = "Tasa de fertilidad por país",
+    subtitle = "2010–2014",
     x = "Año",
     y = "Tasa estandarizada",
     color = "País"
@@ -591,13 +591,15 @@ ggplot(data_long, aes(x = Year, y = Emissions, color = Country_abbr, group = Cou
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
     plot.subtitle = element_text(hjust = 0.5, size = 12),
     axis.text.x = element_text(size = 8),
-    legend.position = "right",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(face = "bold", size = 9),
+    legend.position = "none",
     panel.spacing = unit(1, "lines"),
     strip.text = element_blank(),  # Quitar las etiquetas de los clusters
     aspect.ratio = 0.3              # Hace los paneles más delgados (ajustable)
   )
 
-
+print(fert_trends_c1)
 ```
 
 ```{r}
@@ -689,15 +691,15 @@ data_long_2 <- data_combined_2015_2019 %>%
   )
 
 # Crear gráfico final sin etiquetas de cluster y con gráficos delgados
-ggplot(data_long_2, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, group = Country)) +
+fert_trends_c2 <- ggplot(data_long_2, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
   facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
   scale_x_continuous(breaks = 2015:2019) +
   theme_minimal() +
   labs(
-    title = "Tasa de Fertilidad por País y Cluster (2015–2019)",
-    subtitle = "Agrupado según clustering jerárquico",
+    title = "Tasa de fertilidad por país",
+    subtitle = "2015–2019",
     x = "Año",
     y = "Tasa estandarizada",
     color = "País"
@@ -708,12 +710,13 @@ ggplot(data_long_2, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, 
     axis.text.x = element_text(size = 8),
     legend.text = element_text(size = 8),
     legend.title = element_text(face = "bold", size = 9),
-    legend.position = "right",
+    legend.position = "none",
     panel.spacing = unit(1, "lines"),
     strip.text = element_blank(),  # Quitar los números de los clusters
     aspect.ratio = 0.3              # Hacer los gráficos más delgados
   )
 
+print(fert_trends_c2)
 ```
 
 ```{r}
@@ -785,8 +788,9 @@ data_combined_2020_2023 <- data_years %>%
 data_combined_2020_2023 <- data_combined_2020_2023 %>%
   mutate(
     Cluster = case_when(
-      Cluster == "1" ~ "2",
+      Cluster == "1" ~ "3",
       Cluster == "2" ~ "1",
+      Cluster == "3" ~ "2",
       TRUE ~ as.character(Cluster)
     ),
     Cluster = as.factor(Cluster)
@@ -805,15 +809,15 @@ data_long_3 <- data_combined_2020_2023 %>%
   )
 
 # Crear el gráfico final sin etiquetas de cluster y con gráficos delgados
-ggplot(data_long_3, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, group = Country)) +
+fert_trends_c3 <- ggplot(data_long_3, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, group = Country)) +
   geom_line(size = 0.8) +
   geom_point(size = 2) +
   facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
   scale_x_continuous(breaks = 2020:2023) +
   theme_minimal() +
   labs(
-    title = "Tasa de Fertilidad por País y Cluster (2020–2023)",
-    subtitle = "Agrupado según clustering jerárquico",
+    # title = "Tasa de fertilidad por país",
+    subtitle = "2020–2023",
     x = "Año",
     y = "Tasa estandarizada",
     color = "País"
@@ -830,7 +834,56 @@ ggplot(data_long_3, aes(x = Year, y = Tasa_de_fertilidad, color = Country_abbr, 
     aspect.ratio = 0.3               # Hacer los gráficos más delgados
   )
 
+print(fert_trends_c3)
 ```
+
+```{r}
+width <- 4
+height <- 6
+dpi <- 300
+
+ggsave(
+  filename = "fertility_clusters_1.png",
+  plot = fert_trends_c1,
+  width = width,       # in inches by default
+  height = height,      # in inches
+  dpi = dpi        # dots per inch — good quality for publications
+)
+
+ggsave(
+  filename = "fertility_clusters_2.png",
+  plot = fert_trends_c2,
+  width = width,       # in inches by default
+  height = height,      # in inches
+  dpi = dpi        # dots per inch — good quality for publications
+)
+
+ggsave(
+  filename = "fertility_clusters_3.png",
+  plot = fert_trends_c3,
+  width = width,       # in inches by default
+  height = height,      # in inches
+  dpi = dpi        # dots per inch — good quality for publications
+)
+
+print(fert_trends_c1)
+print(fert_trends_c2)
+print(fert_trends_c3)
+```
+
+```{r}
+library(ggplot2)
+library(patchwork)
+
+# Save as PNG
+png("tft_evolution.png", width=2000, height=1000, res=400)
+
+cp <- fert_trends_c1 | fert_trends_c2 | fert_trends_c3
+
+ggsave("tft_evolution.png", cp, width=12, height=4, dpi=300)
+```
+
+
 
 ```{r}
 # Librerías necesarias
