@@ -1009,15 +1009,15 @@ merged_data <- merged_data %>%
 # Graficar evolucion de educacion
 
 ```{r}
-tendencies_education_completion_rates <- ggplot(merged_data, aes(x = Year, y = education_completion_rate.x, color = `Country`, group = Country)) +
+tendencies_education_completion_rates <- ggplot(merged_data, aes(x = Year, y = education_completion_rate.x, color = `ISO3 Alpha-code`, group = `ISO3 Alpha-code`)) +
     geom_line(size = 0.8) +
     geom_point() +
     labs(
-      title = glue("Education completion rate"),
+      title = glue("Tasa de educación completada"),
       # subtitle = "",
-      x = "Year",
-      y = "Completion rate (%)",
-      color = "Country"
+      x = "Año",
+      y = "Educación completada (%)",
+      color = "País"
     ) +
     theme_minimal() +
     theme(
@@ -1031,8 +1031,8 @@ print(tendencies_education_completion_rates)
 ggsave(
   filename = "tendencies_education_completion_rates.png",
   plot = tendencies_education_completion_rates,
-  width = 10,       # in inches by default
-  height = 8,      # in inches
+  width = 9,       # in inches by default
+  height = 6,      # in inches
   dpi = 300        # dots per inch — good quality for publications
 )
 ```
@@ -1315,5 +1315,136 @@ summary(Modelo_BN)
 AIC(Modelo_BN_bivariado, Modelo_BN)
 library(lmtest)
 lrtest(Modelo_BN_bivariado, Modelo_BN)
+```
+
+
+```{r}
+# Instalar y cargar paquetes si no están
+library(ggplot2)
+
+# Suponiendo que tus datos están en 'merged_data'
+# y que las columnas relevantes son:
+#   - Births_le18: tasa de fertilidad en <18
+#   - education_completion_rate.x: tasa de educación completada
+
+ggplot(merged_data, aes(x = education_completion_rate.x, y = Births_le18)) +
+  geom_point(color = "steelblue", size = 2, alpha = 0.7) +  # Puntos de datos
+  geom_smooth(method = "lm", se = TRUE, color = "darkred", linetype = "dashed") + # Línea de tendencia
+  labs(
+    title = "Relación entre educación finalizada y fertilidad (2010–2023)",
+    x = "Tasa de educación completada (%)",
+    y = "Tasa de fertilidad (<18 años)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    axis.title = element_text(face = "bold")
+  )
+```
+
+
+```{r}
+# Load required libraries
+library(MASS)
+library(ggplot2)
+library(dplyr)
+
+# Fit your model again for reference
+Modelo_BN_bivariado <- glm.nb(
+  Births_le18 ~ education_completion_rate.x + offset(log(TotalWomen_le18)),
+  data = merged_data
+)
+
+# Create new data for prediction across a range of education rates
+new_data <- data.frame(
+  education_completion_rate.x = seq(
+    min(merged_data$education_completion_rate.x, na.rm = TRUE),
+    max(merged_data$education_completion_rate.x, na.rm = TRUE),
+    length.out = 100
+  ),
+  TotalWomen_le18 = 1000
+)
+
+# Get predictions and confidence intervals
+new_data <- new_data %>%
+  mutate(
+    predicted = predict(Modelo_BN_bivariado, newdata = ., type = "response"),
+    se = predict(Modelo_BN_bivariado, newdata = ., type = "link", se.fit = TRUE)$se.fit,
+    link = predict(Modelo_BN_bivariado, newdata = ., type = "link"),
+    lower = exp(link - 1.96 * se),
+    upper = exp(link + 1.96 * se)
+  )
+
+# Plot predicted values with confidence intervals
+pred_nb_b <- ggplot(new_data, aes(x = education_completion_rate.x, y = predicted)) +
+  geom_line(color = "#2F606A", size = 1.2) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, fill = "#2F606A") +
+  labs(
+    title = "Predicciones de fertilidad",
+    subtitle = "del modelo binomial bivariado",
+    x = "Educación completada (%)",
+    y = "Tasa de fertilidad"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 13)
+  )
+print(pred_nb_b)
+```
+```{r}
+ggsave("predicciones-nb-bivariado.png", pred_nb_b, width=6, height=4, dpi=300)
+```
+
+
+
+```{r}
+# Load required libraries
+library(MASS)
+library(ggplot2)
+library(dplyr)
+
+# Fit your model (if not already)
+Modelo_BN_bivariado <- glm.nb(
+  Births_le18 ~ education_completion_rate.x + offset(log(TotalWomen_le18)),
+  data = merged_data
+)
+
+# Create new data for prediction across a range of education rates
+new_data <- data.frame(
+  education_completion_rate.x = seq(
+    min(merged_data$education_completion_rate.x, na.rm = TRUE),
+    max(merged_data$education_completion_rate.x, na.rm = TRUE),
+    length.out = 100
+  ),
+  TotalWomen_le18 = 1000
+)
+
+# Get predictions and confidence intervals
+new_data <- new_data %>%
+  mutate(
+    predicted = predict(Modelo_BN_bivariado, newdata = ., type = "response"),
+    se = predict(Modelo_BN_bivariado, newdata = ., type = "link", se.fit = TRUE)$se.fit,
+    link = predict(Modelo_BN_bivariado, newdata = ., type = "link"),
+    lower = exp(link - 1.96 * se),
+    upper = exp(link + 1.96 * se)
+  )
+
+# Plot predicted values with confidence intervals in gray tones
+ggplot(new_data, aes(x = education_completion_rate.x, y = predicted)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "gray80", alpha = 0.4) +
+  geom_line(color = "gray20", size = 1.2) +
+  labs(
+    title = "Predicted Births <18 by Education Completion Rate",
+    x = "Education Completion Rate (%)",
+    y = "Predicted Number of Births (per average women <18)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, color = "gray20"),
+    axis.title = element_text(color = "gray20"),
+    axis.text = element_text(color = "gray30")
+  )
+
 ```
 
