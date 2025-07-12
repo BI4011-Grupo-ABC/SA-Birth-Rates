@@ -890,16 +890,19 @@ ggsave("tft_evolution.png", cp, width=12, height=4, dpi=300)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(patchwork)  # Para combinar gráficos
 
-### 1. Cluster: 2010–2014
-data_years1 <- data_original[, c("Country", "2010", "2011", "2012", "2013", "2014")]
-data_scaled_1 <- scale(data_years1[, -1])
-hclust_result <- hclust(dist(data_scaled_1))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-data_combined_2010_2014 <- data_years1 %>%
-  mutate(Cluster = as.factor(clusters_hierarchical)) %>%
+# 1. Preparar años y escalar datos
+anios_totales <- as.character(2010:2023)
+data_todo_periodo <- data_original[, c("Country", anios_totales)]
+
+data_scaled <- scale(data_todo_periodo[, -1])
+hclust_result <- hclust(dist(data_scaled))
+clusters <- cutree(hclust_result, k = 3)
+
+# 2. Agregar cluster
+data_clustered <- data_todo_periodo %>%
   mutate(
+    Cluster = as.factor(clusters),
     Cluster = case_when(
       Cluster == "1" ~ "2",
       Cluster == "2" ~ "1",
@@ -908,95 +911,52 @@ data_combined_2010_2014 <- data_years1 %>%
     Cluster = as.factor(Cluster)
   )
 
-data_long_1 <- data_combined_2010_2014 %>%
-  pivot_longer(cols = starts_with("20"), names_to = "Year", values_to = "Tasa") %>%
-  mutate(Year = as.numeric(Year), Country_abbr = substr(Country, 1, 3))
-
-g1 <- ggplot(data_long_1, aes(x = Year, y = Tasa, color = Country_abbr, group = Country)) +
-  geom_line(size = 0.8) +
-  geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
-  scale_x_continuous(breaks = 2010:2014) +
-  theme_minimal() +
-  labs(title = "Fertilidad (2010–2014)", x = "Año", y = "Tasa estandarizada", color = "País") +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    strip.text = element_blank(),
-    legend.position = "none",
-    aspect.ratio = 0.3
-  )
-
-### 2. Cluster: 2015–2019
-data_years2 <- data_original[, c("Country", "2015", "2016", "2017", "2018", "2019")]
-data_scaled_2 <- scale(data_years2[, -1])
-hclust_result <- hclust(dist(data_scaled_2))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-data_combined_2015_2019 <- data_years2 %>%
-  mutate(Cluster = as.factor(clusters_hierarchical)) %>%
+# 3. Convertir a formato largo
+data_long <- data_clustered %>%
+  pivot_longer(cols = all_of(anios_totales), names_to = "Year", values_to = "Tasa") %>%
   mutate(
-    Cluster = case_when(
-      Cluster == "1" ~ "2",
-      Cluster == "2" ~ "1",
-      TRUE ~ as.character(Cluster)
-    ),
-    Cluster = as.factor(Cluster)
+    Year = as.numeric(Year),
+    Country_abbr = substr(Country, 1, 3)
   )
 
-data_long_2 <- data_combined_2015_2019 %>%
-  pivot_longer(cols = starts_with("20"), names_to = "Year", values_to = "Tasa") %>%
-  mutate(Year = as.numeric(Year), Country_abbr = substr(Country, 1, 3))
+# 4. Crear paleta de colores igual a la usada por ggplot por defecto
+# Esto reproduce el orden de colores por país
+paises_ordenados <- sort(unique(data_long$Country_abbr))
+colores_default <- scale_color_discrete()$palette(length(paises_ordenados))
+colores_fijos <- setNames(colores_default, paises_ordenados)
 
-g2 <- ggplot(data_long_2, aes(x = Year, y = Tasa, color = Country_abbr, group = Country)) +
-  geom_line(size = 0.8) +
-  geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
-  scale_x_continuous(breaks = 2015:2019) +
-  theme_minimal() +
-  labs(title = "Fertilidad (2015–2019)", x = "Año", y = "Tasa estandarizada", color = "País") +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    strip.text = element_blank(),
-    legend.position = "none",
-    aspect.ratio = 0.3
-  )
+# 5. Años espaciados en eje X
+breaks_eje_x <- seq(2010, 2023, by = 2)
 
-### 3. Cluster: 2020–2023
-data_years3 <- data_original[, c("Country", "2020", "2021", "2022", "2023")]
-data_scaled_3 <- scale(data_years3[, -1])
-hclust_result <- hclust(dist(data_scaled_3))
-clusters_hierarchical <- cutree(hclust_result, k = 3)
-data_combined_2020_2023 <- data_years3 %>%
-  mutate(Cluster = as.factor(clusters_hierarchical)) %>%
-  mutate(
-    Cluster = case_when(
-      Cluster == "1" ~ "2",
-      Cluster == "2" ~ "1",
-      TRUE ~ as.character(Cluster)
-    ),
-    Cluster = as.factor(Cluster)
-  )
-
-data_long_3 <- data_combined_2020_2023 %>%
-  pivot_longer(cols = starts_with("20"), names_to = "Year", values_to = "Tasa") %>%
-  mutate(Year = as.numeric(Year), Country_abbr = substr(Country, 1, 3))
-
-g3 <- ggplot(data_long_3, aes(x = Year, y = Tasa, color = Country_abbr, group = Country)) +
-  geom_line(size = 0.8) +
-  geom_point(size = 2) +
-  facet_wrap(~Cluster, ncol = 1, strip.position = "left", scales = "free_y") +
-  scale_x_continuous(breaks = 2020:2023) +
-  theme_minimal() +
-  labs(title = "Fertilidad (2020–2023)", x = "Año", y = "Tasa estandarizada", color = "País") +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    strip.text = element_blank(),
-    legend.position = "right",
-    aspect.ratio = 0.3
-  )
-
-### Unir los tres gráficos
-g1 + g2 + g3 + plot_layout(ncol = 3)
-
+# 6. Graficar por cluster con colores iguales al gráfico original 2020–2023
+for (cl in levels(data_long$Cluster)) {
+  data_cluster_i <- data_long %>% filter(Cluster == cl)
+  
+  p <- ggplot(data_cluster_i, aes(x = Year, y = Tasa, color = Country_abbr, group = Country)) +
+    geom_line(size = 0.8) +
+    geom_point(size = 2) +
+    scale_x_continuous(breaks = breaks_eje_x) +
+    scale_color_manual(values = colores_fijos) +
+    theme_minimal(base_size = 14) +
+    labs(
+      title = paste("Tasa de Fertilidad (2010–2023) – Cluster", cl),
+      x = "Año", y = "Tasa estandarizada", color = "País"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+      axis.text.x = element_text(size = 8),
+      legend.text = element_text(size = 8),
+      legend.title = element_text(size = 9, face = "bold"),
+      legend.position = "right",
+      strip.text = element_blank(),
+      aspect.ratio = 0.3
+    )
+  
+  print(p)
+  
+  # Guardar si deseas
+  ggsave(paste0("cluster_", cl, "_fertilidad_colores2020.png"), p, width = 12, height = 5, dpi = 300)
+}
 ```
 
 ```{r}
@@ -1203,6 +1163,74 @@ merged_data <- merged_data %>%
 m_all <- lm(merged_data$FertilityRate_le18 ~ merged_data$education_completion_rate)
 summary(m_all)
 ```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(readxl)
+library(ggplot2)
+
+# 1. Leer datos de educación
+education_completion_rates <- read_excel("Data/education_completion_rate.xlsx")
+education_completion_rates <- education_completion_rates %>%
+  filter(indicatorId == "CR.MOD.3") %>%
+  select(geoUnit, year, value) %>%
+  rename(education_completion_rate = value)
+
+# 2. Leer datos de fertilidad
+fertility_data <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
+colnames(fertility_data)[1] <- "Country"
+
+# Convertir fertilidad a formato largo
+fertility_long <- fertility_data %>%
+  pivot_longer(-Country, names_to = "Year", values_to = "FertilityRate") %>%
+  mutate(Year = as.numeric(Year))
+
+# Verifica si Country coincide con geoUnit — si no, arreglamos con ISO3
+# Por ahora creamos abreviatura ficticia de 3 letras
+fertility_long <- fertility_long %>%
+  mutate(geoUnit = substr(Country, 1, 3))
+
+# Unión de datos
+merged_compare <- fertility_long %>%
+  left_join(education_completion_rates, by = c("geoUnit", "Year" = "year")) %>%
+  drop_na(education_completion_rate, FertilityRate)
+
+# ⚠️ Verifica que hayan datos
+if (nrow(merged_compare) == 0) {
+  stop("No se encontraron coincidencias entre fertilidad y educación. Verifica los códigos de país y los años.")
+}
+
+# Escalar por país
+merged_compare_scaled <- merged_compare %>%
+  group_by(Country) %>%
+  mutate(
+    fertility_scaled = scale(FertilityRate),
+    education_scaled = scale(education_completion_rate)
+  ) %>%
+  ungroup()
+
+# Gráfico comparativo (corrigiendo el uso de linewidth)
+ggplot(merged_compare_scaled, aes(x = Year)) +
+  geom_line(aes(y = fertility_scaled, color = "Tasa de Fertilidad"), linewidth = 1) +
+  geom_line(aes(y = education_scaled, color = "Finalización Educativa"), linewidth = 1, linetype = "dashed") +
+  facet_wrap(~Country, scales = "free_y") +
+  labs(
+    title = "Comparación entre Tasa de Fertilidad y Finalización de Educación",
+    subtitle = "Valores estandarizados por país",
+    y = "Valor estandarizado (z-score)",
+    x = "Año",
+    color = "Indicador"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    legend.position = "top"
+  )
+
+```
+
 
 ```{r}
 merged_data_peru <- merged_data %>%
@@ -1675,3 +1703,84 @@ AIC(Modelo_BN_bivariado, Modelo_BN)
 library(lmtest)
 lrtest(Modelo_BN_bivariado, Modelo_BN)
 ```
+
+
+```{r}
+# Cargar librerías necesaria
+# Fertilidad
+fertility_data <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
+colnames(fertility_data)[1] <- "Country"
+names(fertility_data)
+
+# Revisa los países y años
+unique(fertility_data$Country)
+
+# Educación
+library(readxl)
+education_completion_rates <- read_excel("Data/education_completion_rate.xlsx")
+education_completion_rates <- education_completion_rates %>%
+  filter(indicatorId == "CR.MOD.3") %>%
+  select(geoUnit, year, value) %>%
+  rename(education_completion_rate = value)
+
+unique(education_completion_rates$geoUnit)
+unique(education_completion_rates$year)
+```
+```{r}
+library(tidyverse)
+library(readxl)
+
+# Leer los datos
+fertility_data <- read.csv("tabla_resumen_fertilidad_transpuesta.csv", check.names = FALSE)
+colnames(fertility_data)[1] <- "Country"
+
+# Pasar a formato largo
+fertility_long <- fertility_data %>%
+  pivot_longer(-Country, names_to = "Year", values_to = "FertilityRate") %>%
+  mutate(Year = as.integer(Year))
+
+# Crear mapeo manual de país a ISO3
+iso_mapping <- tibble(
+  Country = c("Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Ecuador",
+              "Paraguay", "Peru", "Uruguay", "Venezuela"),
+  geoUnit = c("ARG", "BOL", "BRA", "CHL", "COL", "ECU", "PRY", "PER", "URY", "VEN")
+)
+
+# Unir para obtener código ISO3
+fertility_long <- fertility_long %>%
+  left_join(iso_mapping, by = "Country")
+
+# Leer educación
+education_completion_rates <- read_excel("Data/education_completion_rate.xlsx")
+education_completion_rates <- education_completion_rates %>%
+  filter(indicatorId == "CR.MOD.3") %>%
+  select(geoUnit, year, value) %>%
+  rename(education_completion_rate = value)
+
+# Unir ambas bases
+merged_compare <- fertility_long %>%
+  left_join(education_completion_rates, by = c("geoUnit", "Year" = "year")) %>%
+  drop_na(education_completion_rate, FertilityRate)
+
+# Confirmar unión
+print(nrow(merged_compare))
+head(merged_compare)
+
+```
+
+```{r}
+ggplot(merged_compare, aes(x = education_completion_rate, y = FertilityRate, color = Country)) +
+  geom_point(size = 2) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  facet_wrap(~Year) +
+  theme_minimal() +
+  labs(
+    title = "Relación entre tasa de finalización educativa y fertilidad",
+    x = "Tasa de finalización educativa (%)",
+    y = "Tasa de fertilidad"
+  )
+
+```
+
+
+
